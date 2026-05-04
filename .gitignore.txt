@@ -1,0 +1,18 @@
+# Maven
+.m2/
+target/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
