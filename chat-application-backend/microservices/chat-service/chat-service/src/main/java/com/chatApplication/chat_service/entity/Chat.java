@@ -23,7 +23,8 @@ public class Chat {
     private String groupIcon;
     private Long createdBy;
     private LocalDateTime createdAt;
-
+    private LocalDateTime updatedAt;
+    private Boolean active;
     @PrePersist
     public void create(){
         createdAt=LocalDateTime.now();

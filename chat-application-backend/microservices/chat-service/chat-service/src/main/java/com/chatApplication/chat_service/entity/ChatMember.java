@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name="chat_members")
 @Data
@@ -19,5 +21,12 @@ public class ChatMember {
     private Long chatId;
     private Long userId;
     private Boolean admin;
+    private LocalDateTime joinedAt;
 
+    @PrePersist
+    public void create(){
+
+        joinedAt= LocalDateTime.now();
+
+    }
 }

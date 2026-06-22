@@ -8,6 +8,7 @@
         <option value="$PROJECT_DIR$/chat-application-backend/microservices/auth-service/auth-service/pom.xml" />
         <option value="$PROJECT_DIR$/chat-application-backend/microservices/user-service/user-service/pom.xml" />
         <option value="$PROJECT_DIR$/chat-application-backend/microservices/chat-service/chat-service/pom.xml" />
+        <option value="$PROJECT_DIR$/chat-application-backend/microservices/message-service/message-service/pom.xml" />
       </list>
     </option>
   </component>
