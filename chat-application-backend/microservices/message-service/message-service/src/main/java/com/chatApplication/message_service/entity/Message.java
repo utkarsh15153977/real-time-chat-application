@@ -28,8 +28,6 @@ public class Message {
     public void prePersist() {
         this.timestamp = LocalDateTime.now();
     }
-//    private boolean delivered;
-//    private boolean seen;
     @Enumerated(EnumType.STRING)
     private MessageStatus status;
     @Column(name = "attachment_url")

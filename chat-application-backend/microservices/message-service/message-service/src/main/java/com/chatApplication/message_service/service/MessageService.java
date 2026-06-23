@@ -1,5 +1,6 @@
 package com.chatApplication.message_service.service;
 
+import com.chatApplication.message_service.dto.AttachmentRequest;
 import com.chatApplication.message_service.dto.MessageRequest;
 import com.chatApplication.message_service.dto.MessageResponse;
 
