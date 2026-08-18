@@ -15,11 +15,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class User {
+
     @Id
-    @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     @Column(nullable = false, unique = true)
@@ -32,14 +33,40 @@ public class User {
     private String phone;
 
     private String profilePicture;
+
     private String statusMessage;
+
+    private LocalDateTime lastLogin;
+
     @Builder.Default
     private Boolean online = false;
+
+    // Future login 2FA
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean twoFactorEnabled = false;
+
+    // Registration verification
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean emailVerified = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean phoneVerified = false;
 
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
+    }
+
+    public void setOnline(Boolean online) {
+        this.online = online;
     }
 }

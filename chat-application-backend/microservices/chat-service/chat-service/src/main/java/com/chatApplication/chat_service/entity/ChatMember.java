@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 public class ChatMember {
     @Id
     @GeneratedValue(strategy= GenerationType.IDENTITY)
-    private Long id;
     private Long chatId;
     private Long userId;
     private Boolean admin;

@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
 public class Chat {
     @Id
     @GeneratedValue(strategy= GenerationType.IDENTITY)
-    private Long id;
+    private Long senderId;
+    
     private String name;
     private Boolean isGroup;
     private String groupIcon;

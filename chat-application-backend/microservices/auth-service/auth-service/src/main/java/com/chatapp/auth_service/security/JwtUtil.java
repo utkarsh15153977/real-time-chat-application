@@ -3,7 +3,6 @@ package com.chatapp.auth_service.security;
 import com.chatapp.auth_service.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -18,45 +17,34 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    private SecretKey getSigningKey() {
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+
+    SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(
                 secretKey.getBytes(StandardCharsets.UTF_8)
         );
     }
 
-//    public String generateToken(User user) {
-//        return Jwts.builder()
-//                .setSubject(user.getEmail())
-//                .claim("userId", user.getId())
-//                .claim("name", user.getName())
-//                .setIssuedAt(new Date())
-//                .setExpiration(
-//                        new Date(System.currentTimeMillis() + 86400000L)
-//                )
-//                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-//                .compact();
-//    }
-//
-//    private Claims extractAllClaims(String token) {
-//        return Jwts.parserBuilder()
-//                .setSigningKey(getSigningKey())
-//                .build()
-//                .parseClaimsJws(token)
-//                .getBody();
-//    }
-
     public String generateToken(User user) {
+
+        Date now = new Date();
+        Date expiration = new Date(
+                now.getTime() + jwtExpiration
+        );
+
         return Jwts.builder()
                 .subject(user.getEmail())
                 .claim("userId", user.getId())
                 .claim("name", user.getName())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis()+86400000L))
+                .issuedAt(now)
+                .expiration(expiration)
                 .signWith(getSigningKey())
                 .compact();
     }
 
     private Claims extractAllClaims(String token) {
+
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -74,6 +62,7 @@ public class JwtUtil {
     }
 
     public boolean validateToken(String token) {
+
         try {
             extractAllClaims(token);
             return true;
@@ -81,13 +70,8 @@ public class JwtUtil {
             return false;
         }
     }
-    public Date getExpiration(String token){
 
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getExpiration();
+    public Date getExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
     }
 }

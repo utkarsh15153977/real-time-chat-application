@@ -8,4 +8,6 @@ public interface AuthService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
     String logout(String token);
+    AuthResponse verifyRegistrationOtp(Long userId, String otp);
+    AuthResponse verifyLoginOtp(String email, String otp);
 }

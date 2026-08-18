@@ -197,13 +197,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageProducer messageProducer;
+
+    public MessageServiceImpl(MessageRepository messageRepository,
+                              SimpMessagingTemplate messagingTemplate,
+                              MessageProducer messageProducer){
+        this.messageRepository = messageRepository;
+        this.messagingTemplate = messagingTemplate;
+        this.messageProducer = messageProducer;
+    }
 
 //    @Override
 //    public MessageResponse sendMessage(

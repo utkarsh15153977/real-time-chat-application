@@ -23,4 +23,13 @@ public class BlacklistedToken {
     private String token;
 
     private LocalDateTime blacklistedAt;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt; // To auto-clean expired tokens
+
+    @Column(name = "blacklisted_by")
+    private String blacklistedBy; // Which user's token
+
+    @Column(name = "reason")
+    private String reason; // LOGOUT, COMPROMISED, ADMIN_BLOCK
 }
