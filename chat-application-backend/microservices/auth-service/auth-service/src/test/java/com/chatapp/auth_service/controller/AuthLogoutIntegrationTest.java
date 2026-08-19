@@ -25,10 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -95,8 +93,8 @@ class AuthLogoutIntegrationTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(
-                        content()
-                                .string("Logout successful")
+                        jsonPath("$.message")
+                                .value("Logout successful")
                 );
 
         Optional<BlacklistedToken> blacklistedToken =
@@ -155,11 +153,9 @@ class AuthLogoutIntegrationTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(
-                        content()
-                                .string("Logout successful")
+                        jsonPath("$.message")
+                                .value("Logout successful")
                 );
-
-
         // -----------------------------------------------------
         // Confirm token exists in blacklist
         // -----------------------------------------------------

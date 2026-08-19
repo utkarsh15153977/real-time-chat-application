@@ -1,11 +1,6 @@
 package com.chatapp.auth_service.controller;
 
-import com.chatapp.auth_service.dto.AuthResponse;
-import com.chatapp.auth_service.dto.ForgotPasswordRequest;
-import com.chatapp.auth_service.dto.LoginRequest;
-import com.chatapp.auth_service.dto.RegisterRequest;
-import com.chatapp.auth_service.dto.ResetPasswordRequest;
-import com.chatapp.auth_service.dto.VerifyOtpRequest;
+import com.chatapp.auth_service.dto.*;
 import com.chatapp.auth_service.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -95,12 +90,29 @@ public class AuthController {
                 )
         );
     }
+
+// =========================================================
+// VERIFY REGISTRATION EMAIL OTP
+// =========================================================
+
+    @PostMapping("/verify-registration-otp")
+    public ResponseEntity<AuthResponse> verifyRegistrationOtp(
+            @Valid @RequestBody VerifyRegistrationOtpRequest request) {
+
+        return ResponseEntity.ok(
+                authService.verifyRegistrationOtp(
+                        request.getUserId(),
+                        request.getOtp()
+                )
+        );
+    }
+
     // =========================================================
-    // LOGOUT
-    // =========================================================
+// LOGOUT
+// =========================================================
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(
+    public ResponseEntity<AuthResponse> logout(
             @RequestHeader("Authorization") String token) {
 
         return ResponseEntity.ok(

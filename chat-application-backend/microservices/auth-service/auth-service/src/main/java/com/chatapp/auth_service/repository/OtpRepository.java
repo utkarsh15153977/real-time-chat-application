@@ -7,17 +7,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface OtpRepository extends JpaRepository<Otp, Long> {
-    Optional<Otp> findTopByUserIdAndPurposeOrderByCreatedAtDesc(
-            Long userId,
-            OtpPurpose purpose
-    );
 
     void deleteByUserIdAndPurpose(
             Long userId,
             OtpPurpose purpose
     );
 
-    boolean existsByUserIdAndPurpose(
+    Optional<Otp> findTopByUserIdAndPurposeOrderByCreatedAtDesc(
+            Long userId,
+            OtpPurpose purpose
+    );
+
+    boolean existsByUserIdAndPurposeAndUsedFalse(
             Long userId,
             OtpPurpose purpose
     );

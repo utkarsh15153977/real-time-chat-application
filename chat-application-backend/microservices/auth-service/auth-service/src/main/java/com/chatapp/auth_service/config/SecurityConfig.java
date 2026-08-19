@@ -23,7 +23,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
+
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
@@ -45,34 +47,39 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                // -------------------------------------------------
+
+                // =================================================
                 // CORS
-                // -------------------------------------------------
+                // =================================================
+
                 .cors(cors ->
-                        cors.configurationSource(corsConfigurationSource())
+                        cors.configurationSource(
+                                corsConfigurationSource()
+                        )
                 )
 
-                // -------------------------------------------------
+                // =================================================
                 // CSRF
-                // -------------------------------------------------
+                // =================================================
+
                 .csrf(csrf -> csrf.disable())
 
-                // -------------------------------------------------
+                // =================================================
                 // SESSION MANAGEMENT
-                // JWT is stateless
-                // -------------------------------------------------
+                // JWT = STATELESS
+                // =================================================
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
 
-                // -------------------------------------------------
+                // =================================================
                 // EXCEPTION HANDLING
-                // IMPORTANT:
-                // Unauthenticated requests must return 401
-                // instead of Spring Security's default 403.
-                // -------------------------------------------------
+                // Unauthenticated -> 401
+                // =================================================
+
                 .exceptionHandling(exception ->
                         exception.authenticationEntryPoint(
                                 new HttpStatusEntryPoint(
@@ -81,37 +88,87 @@ public class SecurityConfig {
                         )
                 )
 
-                // -------------------------------------------------
+                // =================================================
                 // AUTHORIZATION
-                // -------------------------------------------------
+                // =================================================
+
                 .authorizeHttpRequests(auth -> auth
 
-                        // CORS preflight
-                        .requestMatchers(HttpMethod.OPTIONS, "/**")
-                        .permitAll()
+                        // -------------------------------------------------
+                        // CORS PREFLIGHT
+                        // -------------------------------------------------
 
-                        // Public authentication endpoints
                         .requestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/verify-otp",
-                                "/api/auth/forgot-password",
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        ).permitAll()
+
+                        // -------------------------------------------------
+                        // AUTHENTICATION - PUBLIC
+                        // -------------------------------------------------
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/register"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/login"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/verify-otp"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/verify-registration-otp"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/forgot-password"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
                                 "/api/auth/reset-password"
-                        )
-                        .permitAll()
+                        ).permitAll()
 
-                        // Health check
-                        .requestMatchers("/health")
-                        .permitAll()
+                        // -------------------------------------------------
+                        // EMAIL TEST API
+                        // Current controller:
+                        // POST /api/test/send-email
+                        // -------------------------------------------------
 
-                        // Everything else requires authentication
-                        .anyRequest()
-                        .authenticated()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/test/send-email"
+                        ).permitAll()
+
+                        // -------------------------------------------------
+                        // HEALTH CHECK
+                        // -------------------------------------------------
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/health"
+                        ).permitAll()
+
+                        // -------------------------------------------------
+                        // EVERYTHING ELSE
+                        // JWT REQUIRED
+                        // -------------------------------------------------
+
+                        .anyRequest().authenticated()
                 )
 
-                // -------------------------------------------------
-                // JWT AUTHENTICATION FILTER
-                // -------------------------------------------------
+                // =================================================
+                // JWT FILTER
+                // =================================================
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class

@@ -149,100 +149,100 @@ public class AuthServiceImpl implements AuthService {
     // VERIFY REGISTRATION OTP
     // =========================================================
 
-    @Override
-    @Transactional
-    public AuthResponse verifyRegistrationOtp(
-            Long userId,
-            String otp) {
-
-        log.info(
-                "Verifying registration OTP for user ID: {}",
-                userId
-        );
-
-        try {
-
-            User user = userRepository
-                    .findById(userId)
-                    .orElseThrow(() ->
-                            new UserNotFoundException(
-                                    "User not found with ID: " + userId
-                            )
-                    );
-
-            if (Boolean.TRUE.equals(user.getEmailVerified())
-                    && Boolean.TRUE.equals(user.getPhoneVerified())) {
-
-                return AuthResponse.builder()
-                        .token(null)
-                        .userId(user.getId())
-                        .name(user.getName())
-                        .email(user.getEmail())
-                        .message("User is already verified")
-                        .requiresTwoFactor(false)
-                        .build();
-            }
-
-            boolean valid = otpService.verifyOtp(
-                    userId,
-                    otp,
-                    OtpPurpose.REGISTRATION
-            );
-
-            if (!valid) {
-
-                log.warn(
-                        "Invalid or expired registration OTP for user ID: {}",
-                        userId
-                );
-
-                throw new InvalidCredentialsException(
-                        "Invalid or expired OTP"
-                );
-            }
-
-            user.setEmailVerified(true);
-            user.setPhoneVerified(true);
-
-            userRepository.save(user);
-
-            log.info(
-                    "Registration verification successful for user ID: {}",
-                    userId
-            );
-
-            return AuthResponse.builder()
-                    .token(null)
-                    .userId(user.getId())
-                    .name(user.getName())
-                    .email(user.getEmail())
-                    .message(
-                            "Registration verified successfully. " +
-                                    "You can now login."
-                    )
-                    .requiresTwoFactor(false)
-                    .build();
-
-        } catch (UserNotFoundException |
-                 InvalidCredentialsException |
-                 IllegalStateException e) {
-
-            throw e;
-
-        } catch (Exception e) {
-
-            log.error(
-                    "Unexpected error during OTP verification " +
-                            "for user ID: {}",
-                    userId,
-                    e
-            );
-
-            throw new RuntimeException(
-                    "OTP verification failed: " + e.getMessage()
-            );
-        }
-    }
+//    @Override
+//    @Transactional
+//    public AuthResponse verifyRegistrationOtp(
+//            Long userId,
+//            String otp) {
+//
+//        log.info(
+//                "Verifying registration OTP for user ID: {}",
+//                userId
+//        );
+//
+//        try {
+//
+//            User user = userRepository
+//                    .findById(userId)
+//                    .orElseThrow(() ->
+//                            new UserNotFoundException(
+//                                    "User not found with ID: " + userId
+//                            )
+//                    );
+//
+//            if (Boolean.TRUE.equals(user.getEmailVerified())
+//                    && Boolean.TRUE.equals(user.getPhoneVerified())) {
+//
+//                return AuthResponse.builder()
+//                        .token(null)
+//                        .userId(user.getId())
+//                        .name(user.getName())
+//                        .email(user.getEmail())
+//                        .message("User is already verified")
+//                        .requiresTwoFactor(false)
+//                        .build();
+//            }
+//
+//            boolean valid = otpService.verifyOtp(
+//                    userId,
+//                    otp,
+//                    OtpPurpose.REGISTRATION
+//            );
+//
+//            if (!valid) {
+//
+//                log.warn(
+//                        "Invalid or expired registration OTP for user ID: {}",
+//                        userId
+//                );
+//
+//                throw new InvalidCredentialsException(
+//                        "Invalid or expired OTP"
+//                );
+//            }
+//
+//            user.setEmailVerified(true);
+//            user.setPhoneVerified(true);
+//
+//            userRepository.save(user);
+//
+//            log.info(
+//                    "Registration verification successful for user ID: {}",
+//                    userId
+//            );
+//
+//            return AuthResponse.builder()
+//                    .token(null)
+//                    .userId(user.getId())
+//                    .name(user.getName())
+//                    .email(user.getEmail())
+//                    .message(
+//                            "Registration verified successfully. " +
+//                                    "You can now login."
+//                    )
+//                    .requiresTwoFactor(false)
+//                    .build();
+//
+//        } catch (UserNotFoundException |
+//                 InvalidCredentialsException |
+//                 IllegalStateException e) {
+//
+//            throw e;
+//
+//        } catch (Exception e) {
+//
+//            log.error(
+//                    "Unexpected error during OTP verification " +
+//                            "for user ID: {}",
+//                    userId,
+//                    e
+//            );
+//
+//            throw new RuntimeException(
+//                    "OTP verification failed: " + e.getMessage()
+//            );
+//        }
+//    }
 
     // =========================================================
     // LOGIN
@@ -608,31 +608,50 @@ public class AuthServiceImpl implements AuthService {
 
         return "Password reset successful";
     }
-    // =========================================================
-    // LOGOUT
-    // =========================================================
+// =========================================================
+// LOGOUT
+// =========================================================
 
     @Override
     @Transactional
-    public String logout(String token) {
+    public AuthResponse logout(String token) {
 
         log.info("Processing logout request");
 
         try {
 
+            // -------------------------------------------------
+            // Validate token
+            // -------------------------------------------------
+
             if (token == null || token.isBlank()) {
+
+                log.warn("Logout failed: Token is empty");
 
                 throw new IllegalArgumentException(
                         "Token cannot be empty"
                 );
             }
 
+            // -------------------------------------------------
             // Remove Bearer prefix
+            // -------------------------------------------------
+
             if (token.startsWith("Bearer ")) {
-                token = token.substring(7);
+                token = token.substring(7).trim();
             }
 
+            if (token.isBlank()) {
+
+                throw new IllegalArgumentException(
+                        "Token cannot be empty"
+                );
+            }
+
+            // -------------------------------------------------
             // Validate JWT
+            // -------------------------------------------------
+
             if (!jwtUtil.validateToken(token)) {
 
                 log.warn(
@@ -644,7 +663,10 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
 
-            // Check whether already blacklisted
+            // -------------------------------------------------
+            // Check if token is already blacklisted
+            // -------------------------------------------------
+
             if (blacklistRepository
                     .findByToken(token)
                     .isPresent()) {
@@ -653,10 +675,20 @@ public class AuthServiceImpl implements AuthService {
                         "Logout requested for already blacklisted token"
                 );
 
-                return "Already logged out";
+                return AuthResponse.builder()
+                        .token(null)
+                        .userId(null)
+                        .name(null)
+                        .email(null)
+                        .message("Already logged out")
+                        .requiresTwoFactor(false)
+                        .build();
             }
 
-            // Create blacklist entry
+            // -------------------------------------------------
+            // Blacklist JWT
+            // -------------------------------------------------
+
             BlacklistedToken blacklistedToken =
                     BlacklistedToken.builder()
                             .token(token)
@@ -671,26 +703,31 @@ public class AuthServiceImpl implements AuthService {
                     "JWT token blacklisted successfully"
             );
 
-            return "Logout successful";
-
+            // -------------------------------------------------
+            // Return response
+            // -------------------------------------------------
+            return AuthResponse.builder()
+                    .token(null)
+                    .userId(null)
+                    .name(null)
+                    .email(null)
+                    .message("Logout successful")
+                    .requiresTwoFactor(false)
+                    .build();
         } catch (IllegalArgumentException e) {
-
             log.warn(
                     "Logout validation failed: {}",
                     e.getMessage()
             );
-
             throw e;
-
         } catch (Exception e) {
-
             log.error(
                     "Unexpected error during logout",
                     e
             );
-
             throw new RuntimeException(
-                    "Logout failed: " + e.getMessage()
+                    "Logout failed: " + e.getMessage(),
+                    e
             );
         }
     }
@@ -736,5 +773,100 @@ public class AuthServiceImpl implements AuthService {
                 && hasLower
                 && hasDigit
                 && hasSpecial;
+    }
+    @Override
+    @Transactional
+    public AuthResponse verifyRegistrationOtp(
+            Long userId,
+            String otp) {
+
+        log.info(
+                "Verifying registration email OTP for user ID: {}",
+                userId
+        );
+
+        try {
+
+            User user = userRepository
+                    .findById(userId)
+                    .orElseThrow(() ->
+                            new UserNotFoundException(
+                                    "User not found with ID: " + userId
+                            )
+                    );
+
+            // Already email verified
+            if (Boolean.TRUE.equals(user.getEmailVerified())) {
+
+                return AuthResponse.builder()
+                        .token(null)
+                        .userId(user.getId())
+                        .name(user.getName())
+                        .email(user.getEmail())
+                        .message("Email is already verified")
+                        .requiresTwoFactor(false)
+                        .build();
+            }
+
+            // Verify EMAIL OTP
+            boolean valid = otpService.verifyOtp(
+                    userId,
+                    otp,
+                    OtpPurpose.REGISTRATION_EMAIL
+            );
+
+            if (!valid) {
+
+                log.warn(
+                        "Invalid or expired registration email OTP for user ID: {}",
+                        userId
+                );
+
+                throw new InvalidCredentialsException(
+                        "Invalid or expired OTP"
+                );
+            }
+
+            // Only email is verified here
+            user.setEmailVerified(true);
+
+            userRepository.save(user);
+
+            log.info(
+                    "Registration email verification successful for user ID: {}",
+                    userId
+            );
+
+            return AuthResponse.builder()
+                    .token(null)
+                    .userId(user.getId())
+                    .name(user.getName())
+                    .email(user.getEmail())
+                    .message(
+                            "Email verified successfully. " +
+                                    "You can now continue registration/login."
+                    )
+                    .requiresTwoFactor(false)
+                    .build();
+
+        } catch (UserNotFoundException |
+                 InvalidCredentialsException |
+                 IllegalStateException e) {
+
+            throw e;
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Unexpected error during registration email OTP verification " +
+                            "for user ID: {}",
+                    userId,
+                    e
+            );
+
+            throw new RuntimeException(
+                    "OTP verification failed: " + e.getMessage()
+            );
+        }
     }
 }
