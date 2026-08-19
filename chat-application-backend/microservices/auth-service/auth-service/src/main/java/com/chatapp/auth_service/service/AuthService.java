@@ -10,4 +10,10 @@ public interface AuthService {
     String logout(String token);
     AuthResponse verifyRegistrationOtp(Long userId, String otp);
     AuthResponse verifyLoginOtp(String email, String otp);
+    String forgotPassword(String email);
+    String resetPassword(
+            String email,
+            String otp,
+            String newPassword
+    );
 }

@@ -1,207 +1,133 @@
 package com.chatapp.auth_service.service;
 
+import com.chatapp.auth_service.entity.Otp;
 import com.chatapp.auth_service.entity.OtpPurpose;
-import org.springframework.data.redis.core.RedisTemplate;
+import com.chatapp.auth_service.repository.OtpRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.concurrent.TimeUnit;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
+@Transactional
 public class OtpServiceImpl implements OtpService {
 
-    private static final String OTP_KEY_PREFIX = "2FA_OTP:";
-    private static final long OTP_EXPIRATION_MINUTES = 5;
+    private final OtpRepository otpRepository;
 
-    private final RedisTemplate<String, String> redisTemplate;
-    private final SecureRandom secureRandom;
+    private final SecureRandom secureRandom = new SecureRandom();
 
-    public OtpServiceImpl(
-            RedisTemplate<String, String> redisTemplate) {
-
-        this.redisTemplate = redisTemplate;
-        this.secureRandom = new SecureRandom();
+    public OtpServiceImpl(OtpRepository otpRepository) {
+        this.otpRepository = otpRepository;
     }
-
-    // =========================================================
-    // GENERATE OTP
-    // =========================================================
 
     @Override
     public String generateOtp(
             Long userId,
-            OtpPurpose purpose) {
+            OtpPurpose purpose
+    ) {
 
-        validateInput(userId, purpose);
+        // Remove previous OTP for the same purpose
+        otpRepository.deleteByUserIdAndPurpose(
+                userId,
+                purpose
+        );
 
+        // Generate 6-digit OTP
         String otp = String.format(
                 "%06d",
                 secureRandom.nextInt(1_000_000)
         );
 
-        String key = buildKey(userId, purpose);
+        // Determine OTP expiry
+        int expiryMinutes = switch (purpose) {
 
-        String otpHash = hashOtp(otp);
+            // Registration / verification OTPs
+            case REGISTRATION,
+                 REGISTRATION_EMAIL,
+                 REGISTRATION_PHONE,
+                 VERIFY_EMAIL,
+                 VERIFY_PHONE -> 15;
 
-        redisTemplate.opsForValue().set(
-                key,
-                otpHash,
-                OTP_EXPIRATION_MINUTES,
-                TimeUnit.MINUTES
-        );
+            // Login / password OTPs
+            case LOGIN_2FA,
+                 PASSWORD_RESET,
+                 FORGOT_PASSWORD,
+                 RESET_PASSWORD -> 5;
+        };
+
+        // Create OTP entity
+        Otp otpEntity = Otp.builder()
+                .userId(userId)
+                .otp(otp)
+                .purpose(purpose)
+                .expiresAt(
+                        LocalDateTime.now()
+                                .plusMinutes(expiryMinutes)
+                )
+                .used(false)
+                .build();
+
+        otpRepository.save(otpEntity);
 
         return otp;
     }
-
-    // =========================================================
-    // VERIFY OTP
-    // =========================================================
 
     @Override
     public boolean verifyOtp(
             Long userId,
             String enteredOtp,
-            OtpPurpose purpose) {
+            OtpPurpose purpose
+    ) {
 
-        if (userId == null
-                || purpose == null
-                || enteredOtp == null
-                || !enteredOtp.matches("\\d{6}")) {
+        Optional<Otp> optionalOtp =
+                otpRepository
+                        .findTopByUserIdAndPurposeOrderByCreatedAtDesc(
+                                userId,
+                                purpose
+                        );
 
+        if (optionalOtp.isEmpty()) {
             return false;
         }
 
-        String key = buildKey(userId, purpose);
+        Otp otp = optionalOtp.get();
 
-        String storedHash =
-                redisTemplate.opsForValue().get(key);
-
-        if (storedHash == null) {
+        // Check OTP value, expiry and used status
+        if (!otp.isValid(enteredOtp)) {
             return false;
         }
 
-        String enteredOtpHash =
-                hashOtp(enteredOtp);
+        // Mark OTP as used
+        otp.setUsed(true);
 
-        boolean valid = MessageDigest.isEqual(
-                storedHash.getBytes(StandardCharsets.UTF_8),
-                enteredOtpHash.getBytes(StandardCharsets.UTF_8)
-        );
+        otpRepository.save(otp);
 
-        if (valid) {
-            redisTemplate.delete(key);
-        }
-
-        return valid;
+        return true;
     }
-
-    // =========================================================
-    // DELETE OTP
-    // =========================================================
 
     @Override
     public void deleteOtp(
             Long userId,
-            OtpPurpose purpose) {
+            OtpPurpose purpose
+    ) {
 
-        validateInput(userId, purpose);
-
-        String key = buildKey(userId, purpose);
-
-        redisTemplate.delete(key);
+        otpRepository.deleteByUserIdAndPurpose(
+                userId,
+                purpose
+        );
     }
-
-    // =========================================================
-    // CHECK OTP
-    // =========================================================
 
     @Override
     public boolean hasOtp(
             Long userId,
-            OtpPurpose purpose) {
+            OtpPurpose purpose
+    ) {
 
-        if (userId == null || purpose == null) {
-            return false;
-        }
-
-        String key = buildKey(userId, purpose);
-
-        return Boolean.TRUE.equals(
-                redisTemplate.hasKey(key)
+        return otpRepository.existsByUserIdAndPurpose(
+                userId,
+                purpose
         );
-    }
-
-    // =========================================================
-    // BUILD REDIS KEY
-    // =========================================================
-
-    private String buildKey(
-            Long userId,
-            OtpPurpose purpose) {
-
-        return OTP_KEY_PREFIX
-                + purpose.name()
-                + ":"
-                + userId;
-    }
-
-    // =========================================================
-    // HASH OTP
-    // =========================================================
-
-    private String hashOtp(String otp) {
-
-        try {
-
-            MessageDigest digest =
-                    MessageDigest.getInstance("SHA-256");
-
-            byte[] hash = digest.digest(
-                    otp.getBytes(StandardCharsets.UTF_8)
-            );
-
-            StringBuilder hex =
-                    new StringBuilder(hash.length * 2);
-
-            for (byte b : hash) {
-
-                hex.append(
-                        String.format("%02x", b)
-                );
-            }
-
-            return hex.toString();
-
-        } catch (NoSuchAlgorithmException e) {
-
-            throw new IllegalStateException(
-                    "SHA-256 algorithm not available",
-                    e
-            );
-        }
-    }
-
-    // =========================================================
-    // VALIDATE INPUT
-    // =========================================================
-
-    private void validateInput(
-            Long userId,
-            OtpPurpose purpose) {
-
-        if (userId == null) {
-            throw new IllegalArgumentException(
-                    "User ID cannot be null"
-            );
-        }
-
-        if (purpose == null) {
-            throw new IllegalArgumentException(
-                    "OTP purpose cannot be null"
-            );
-        }
     }
 }

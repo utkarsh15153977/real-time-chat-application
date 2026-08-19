@@ -24,8 +24,8 @@
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<jjwt.version>0.12.7</jjwt.version>
-		<spring-boot.run.jvmArguments>-
-			Duser.timezone=UTC
+		<spring-boot.run.jvmArguments>
+			-Duser.timezone=UTC
 		</spring-boot.run.jvmArguments>
 	</properties>
 
