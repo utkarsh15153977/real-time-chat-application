@@ -3,7 +3,10 @@ package com.chatApplication.message_service.controller;
 import com.chatApplication.message_service.dto.ChatMessageRequestDTO;
 import com.chatApplication.message_service.dto.ChatMessageResponseDTO;
 import com.chatApplication.message_service.dto.TypingEvent;
+import com.chatApplication.message_service.entity.MessageType;
 import com.chatApplication.message_service.exception.MessageValidationException;
+import com.chatApplication.message_service.kafka.MessageCreatedEvent;
+import com.chatApplication.message_service.kafka.MessageEventPublisher;
 import com.chatApplication.message_service.service.InboxService;
 import com.chatApplication.message_service.service.MessageService;
 import com.chatApplication.message_service.service.PushNotificationService;
@@ -25,18 +28,18 @@ import java.security.Principal;
  *   - Never trusts the client-provided senderId field (spoofing protection)
  *   - Principal is set by WebSocketAuthInterceptor during CONNECT frame
  * <p>
- * Endpoints:
- * - /app/chat.sendMessage: Send a text or media message
- * - /app/chat.typing: Send a typing indicator (transient, not persisted)
+ * Message Pipeline:
+ *   1. Persist message to PostgreSQL
+ *   2. Broadcast via STOMP (real-time delivery)
+ *   3. Send inbox update
+ *   4. Publish Kafka event (async downstream consumers)
+ *   5. Push notification for offline recipients
  * <p>
  * Broadcast destinations:
  * - /topic/room.{chatRoomId}: All subscribers in the chat room
  * - /user/{userId}/queue/messages: Direct message to specific user
  * - /user/{userId}/queue/inbox: Real-time inbox update (Phase 4)
- * <p>
- * Push Notifications (Phase 5):
- * - If recipient is OFFLINE, a push notification is dispatched via FCM
- *   to all registered devices asynchronously.
+ * - chat.message-created topic: Kafka event for downstream services (Phase 6)
  */
 @Slf4j
 @Controller
@@ -48,6 +51,7 @@ public class ChatWebSocketController {
     private final InboxService inboxService;
     private final UserPresenceService userPresenceService;
     private final PushNotificationService pushNotificationService;
+    private final MessageEventPublisher messageEventPublisher;
 
     /**
      * Handles incoming chat messages via STOMP.
@@ -60,14 +64,12 @@ public class ChatWebSocketController {
      */
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(ChatMessageRequestDTO requestDTO, Principal principal) {
-        // Extract authenticated senderId from Principal (never trust client payload)
         String senderId = extractSenderId(principal);
         if (senderId == null) {
             log.warn("sendMessage rejected: no authenticated principal");
             return;
         }
 
-        // Override client-provided senderId with authenticated value
         requestDTO.setSenderId(senderId);
 
         log.info("WebSocket message: sender={}, type={}, room={}",
@@ -84,16 +86,19 @@ public class ChatWebSocketController {
             String roomTopic = "/topic/room." + requestDTO.getChatRoomId();
             messagingTemplate.convertAndSend(roomTopic, responseDTO);
 
-            // 3. Also send to recipient's personal queue for direct delivery
+            // 3. Send to recipient's personal queue for direct delivery
             messagingTemplate.convertAndSendToUser(
                     requestDTO.getRecipientId(),
                     "/queue/messages",
                     responseDTO);
 
-            // 4. Send real-time inbox update to recipient (Phase 4)
+            // 4. Send real-time inbox update (Phase 4)
             inboxService.notifyInboxUpdate(responseDTO);
 
-            // 5. Push notification for offline recipients (Phase 5)
+            // 5. Publish Kafka event for downstream consumers (Phase 6)
+            publishMessageCreatedEvent(responseDTO, requestDTO);
+
+            // 6. Push notification for offline recipients (Phase 5)
             notifyOfflineRecipient(
                     requestDTO.getRecipientId(),
                     senderId,
@@ -121,11 +126,6 @@ public class ChatWebSocketController {
 
     /**
      * Handles typing indicators (transient, not persisted).
-     * <p>
-     * Security: senderId is extracted from the authenticated Principal.
-     *
-     * @param event     the typing event payload (senderId field is ignored)
-     * @param principal the authenticated user
      */
     @MessageMapping("/chat.typing")
     public void typing(TypingEvent event, Principal principal) {
@@ -134,7 +134,6 @@ public class ChatWebSocketController {
             return;
         }
 
-        // Override with authenticated senderId
         event.setSenderId(senderId);
 
         messagingTemplate.convertAndSendToUser(
@@ -144,15 +143,41 @@ public class ChatWebSocketController {
     }
 
     /**
-     * Checks recipient presence and dispatches a push notification if offline.
+     * Builds and publishes a {@link MessageCreatedEvent} to Kafka.
      * <p>
-     * Push dispatch is asynchronous and fire-and-forget. Errors are logged
-     * but do not affect message delivery.
+     * Publication failures are fire-and-forget: the message has already
+     * been persisted and broadcast via STOMP, so Kafka failures only
+     * affect downstream consumers, not the core message delivery.
      *
-     * @param recipientId the recipient user ID
-     * @param senderId    the sender user ID (used as notification title)
-     * @param content     the message content preview
-     * @param chatRoomId  the chat room identifier
+     * @param responseDTO the persisted message response
+     * @param requestDTO  the original request (for chatRoomId)
+     */
+    private void publishMessageCreatedEvent(
+            ChatMessageResponseDTO responseDTO,
+            ChatMessageRequestDTO requestDTO) {
+
+        try {
+            MessageCreatedEvent event = MessageCreatedEvent.builder()
+                    .messageId(responseDTO.getMessageId())
+                    .chatRoomId(requestDTO.getChatRoomId())
+                    .senderId(responseDTO.getSenderId())
+                    .recipientId(responseDTO.getRecipientId())
+                    .content(responseDTO.getContent())
+                    .type(responseDTO.getMessageType())
+                    .createdAt(responseDTO.getTimestamp())
+                    .build();
+
+            messageEventPublisher.publishMessageCreatedEvent(event);
+
+        } catch (Exception e) {
+            // Kafka publication failure must never affect message delivery
+            log.warn("Failed to publish MessageCreatedEvent for messageId={}: {}",
+                    responseDTO.getMessageId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Checks recipient presence and dispatches a push notification if offline.
      */
     private void notifyOfflineRecipient(
             String recipientId,
@@ -170,7 +195,6 @@ public class ChatWebSocketController {
                         chatRoomId);
             }
         } catch (Exception e) {
-            // Never let push notification failure affect message delivery
             log.warn("Failed to check presence or send push for recipient {}: {}",
                     recipientId, e.getMessage());
         }
@@ -178,17 +202,12 @@ public class ChatWebSocketController {
 
     /**
      * Extracts the sender ID from the authenticated Principal.
-     * The Principal name is set to userId by WebSocketAuthInterceptor.
-     *
-     * @param principal the STOMP principal
-     * @return the authenticated user ID, or null if not authenticated
      */
     private String extractSenderId(Principal principal) {
         if (principal == null) {
             return null;
         }
 
-        // If principal is a Spring Security Authentication, get the name
         if (principal instanceof Authentication auth) {
             return auth.getName();
         }
