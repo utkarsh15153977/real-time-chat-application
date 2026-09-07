@@ -729,4 +729,147 @@ public class MessageServiceImpl implements MessageService {
                 "/queue/receipts",
                 receipt);
     }
+
+    // ================================================================
+    // Read Receipts & Dynamic Delivery Status (Phase 3)
+    // ================================================================
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Uses optimistic locking: the UPDATE query only executes if the current
+     * status is not already READ, preventing backwards transitions.
+     * Returns null if the message was not found or the recipientId doesn't match.
+     */
+    @Override
+    @Transactional
+    public MessageStatusUpdateDTO markAsDelivered(
+            String messageId, String recipientId) {
+
+        Long msgId = Long.parseLong(messageId);
+        Instant now = Instant.now();
+
+        // Attempt the status update via bulk query (0 or 1 rows affected)
+        int updated = messageRepository.updateMessageStatus(
+                msgId, recipientId, MessageStatus.DELIVERED, null);
+
+        if (updated == 0) {
+            log.debug("markAsDelivered: no update for message {} (not found or wrong recipient)",
+                    messageId);
+            return null;
+        }
+
+        // Fetch the updated message for broadcasting
+        Message message = messageRepository.findById(msgId).orElse(null);
+        if (message == null) {
+            return null;
+        }
+
+        MessageStatusUpdateDTO update = MessageStatusUpdateDTO.builder()
+                .messageId(messageId)
+                .chatRoomId(message.getSenderId() + "-" + message.getReceiverId())
+                .senderId(message.getSenderId())
+                .recipientId(message.getReceiverId())
+                .status(MessageStatus.DELIVERED)
+                .timestamp(now)
+                .build();
+
+        log.info("Message {} marked DELIVERED by user {}", messageId, recipientId);
+        return update;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Sets readAt timestamp for audit trail. Uses optimistic locking
+     * to prevent unauthorized status manipulation.
+     */
+    @Override
+    @Transactional
+    public MessageStatusUpdateDTO markAsRead(
+            String messageId, String recipientId) {
+
+        Long msgId = Long.parseLong(messageId);
+        Instant now = Instant.now();
+
+        // Attempt the status update via bulk query (0 or 1 rows affected)
+        int updated = messageRepository.updateMessageStatus(
+                msgId, recipientId, MessageStatus.READ, now);
+
+        if (updated == 0) {
+            log.debug("markAsRead: no update for message {} (not found or wrong recipient)",
+                    messageId);
+            return null;
+        }
+
+        // Fetch the updated message for broadcasting
+        Message message = messageRepository.findById(msgId).orElse(null);
+        if (message == null) {
+            return null;
+        }
+
+        MessageStatusUpdateDTO update = MessageStatusUpdateDTO.builder()
+                .messageId(messageId)
+                .chatRoomId(message.getSenderId() + "-" + message.getReceiverId())
+                .senderId(message.getSenderId())
+                .recipientId(message.getReceiverId())
+                .status(MessageStatus.READ)
+                .timestamp(now)
+                .build();
+
+        log.info("Message {} marked READ by user {}", messageId, recipientId);
+        return update;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Performs a bulk UPDATE query for efficiency. Only updates messages
+     * where the recipient matches readerId and status is not already READ.
+     * Returns the list of affected message IDs for broadcasting.
+     */
+    @Override
+    @Transactional
+    public BulkStatusUpdateDTO markChatRoomAsRead(
+            String chatRoomId, String readerId) {
+
+        Instant now = Instant.now();
+
+        // Fetch unread message IDs before updating (for broadcasting)
+        List<Message> unreadMessages = messageRepository
+                .findUnreadMessagesInChatRoom(chatRoomId, readerId);
+
+        if (unreadMessages.isEmpty()) {
+            log.debug("markChatRoomAsRead: no unread messages in room {} for user {}",
+                    chatRoomId, readerId);
+            return BulkStatusUpdateDTO.builder()
+                    .chatRoomId(chatRoomId)
+                    .readerId(readerId)
+                    .messageIds(List.of())
+                    .status(MessageStatus.READ)
+                    .timestamp(now)
+                    .build();
+        }
+
+        // Collect message IDs before the bulk update
+        List<String> messageIds = unreadMessages.stream()
+                .map(m -> String.valueOf(m.getMsgId()))
+                .toList();
+
+        // Perform bulk update
+        int updatedCount = messageRepository.markMessagesAsReadInChatRoom(
+                chatRoomId, readerId, MessageStatus.READ, now);
+
+        BulkStatusUpdateDTO bulkUpdate = BulkStatusUpdateDTO.builder()
+                .chatRoomId(chatRoomId)
+                .readerId(readerId)
+                .messageIds(messageIds)
+                .status(MessageStatus.READ)
+                .timestamp(now)
+                .build();
+
+        log.info("Bulk marked {} messages as READ in room {} by user {}",
+                updatedCount, chatRoomId, readerId);
+        return bulkUpdate;
+    }
 }

@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -46,6 +47,10 @@ public class Message {
 
     @Enumerated(EnumType.STRING)
     private MessageStatus status;
+
+    /** Timestamp when the message was read by the recipient */
+    @Column(name = "read_at")
+    private Instant readAt;
 
     /** Type of message content (TEXT, IMAGE, VIDEO, AUDIO, FILE) */
     @Enumerated(EnumType.STRING)
