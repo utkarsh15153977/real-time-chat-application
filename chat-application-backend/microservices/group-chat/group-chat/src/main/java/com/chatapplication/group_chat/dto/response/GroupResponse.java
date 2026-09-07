@@ -3,6 +3,7 @@ package com.chatapplication.group_chat.dto.response;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter

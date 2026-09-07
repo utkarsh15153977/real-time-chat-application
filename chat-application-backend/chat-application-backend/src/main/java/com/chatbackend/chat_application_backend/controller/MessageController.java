@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/messages")
@@ -19,7 +20,7 @@ public class MessageController {
         this.messageService = messageService;
     }
 
-    //Sending messages API
+    // Sending messages API
     @PostMapping
     public ResponseEntity<MessageResponse> sendMessage(@Valid @RequestBody MessageRequest req) {
         return ResponseEntity.ok(
@@ -46,5 +47,27 @@ public class MessageController {
     public ResponseEntity<Void> deleteMessage(@PathVariable Long messageId) {
         messageService.deleteMessage(messageId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{messageId}/delivered")
+    public ResponseEntity<Void> markAsDelivered(@PathVariable Long messageId,
+                                                @RequestBody Map<String, Long> request) {
+        Long userId = request.get("userId");
+        messageService.markAsDelivered(messageId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/chat/{chatRoomId}/read-all")
+    public ResponseEntity<Void> markAllAsRead(@PathVariable Long chatRoomId,
+                                              @RequestParam Long userId) {
+        messageService.markAsRead(chatRoomId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/chat/{chatRoomId}/unread-count")
+    public ResponseEntity<Map<String, Long>> getUnreadCount(@PathVariable Long chatRoomId,
+                                                            @RequestParam Long userId) {
+        long count = messageService.getUnreadMessageCount(userId, chatRoomId);
+        return ResponseEntity.ok(Map.of("unreadCount", count));
     }
 }

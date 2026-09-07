@@ -1,5 +1,6 @@
 package com.chatapp.auth_service.controller;
 
+import com.chatapp.auth_service.config.TestConfig;
 import com.chatapp.auth_service.entity.BlacklistedToken;
 import com.chatapp.auth_service.entity.User;
 import com.chatapp.auth_service.repository.BlacklistedTokenRepository;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
@@ -31,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@ContextConfiguration(classes = {TestConfig.class})
 class AuthLogoutIntegrationTest {
 
     @Autowired

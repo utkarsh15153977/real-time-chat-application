@@ -21,7 +21,7 @@ public interface ChatMessageMapper {
          */
         @Mapping(target = "messageId", source = "id")
         @Mapping(target = "attachment", source = "attachment")
-        @Mapping(target = "reactions", source = "reactions")
+        @Mapping(target = "reactions", ignore = true)
         @Mapping(target = "replyToMessageId", source = "replyTo.id")
         @Mapping(target = "replyMessage", source = "replyTo.content")
         ChatMessageResponse toResponse(ChatMessage message);
@@ -36,9 +36,6 @@ public interface ChatMessageMapper {
          */
         @Mapping(target = "id", ignore = true)
         @Mapping(target = "conversation", ignore = true)
-        @Mapping(target = "attachment", ignore = true)
-        @Mapping(target = "replyTo", ignore = true)
-        @Mapping(target = "reactions", ignore = true)
         @Mapping(target = "status", ignore = true)
         @Mapping(target = "createdAt", ignore = true)
         @Mapping(target = "editedAt", ignore = true)
@@ -65,8 +62,6 @@ public interface ChatMessageMapper {
         @Mapping(target = "deletedAt", ignore = true)
         @Mapping(target = "attachment", ignore = true)
         @Mapping(target = "replyTo", ignore = true)
-        @Mapping(target = "reactions", ignore = true)
-        @Mapping(target = "id", ignore = true)
         void updateEntity(
                 EditMessageRequest request,
                 @MappingTarget ChatMessage entity

@@ -13,10 +13,14 @@ public interface MessageService {
     Message getMessage(Long messageId);
     // Delete message
     void deleteMessage(Long messageId);
-    // Mark message as delivered
+    // Mark message as delivered (single message)
     void markMessageDelivered(Long messageId);
-    // Mark message as read
+    // Mark message as read (single message)
     void markMessageRead(Long messageId);
+    // Mark as delivered with ACK push
+    void markAsDelivered(Long messageId, Long userId);
+    // Mark all messages as read with ACK push
+    void markAsRead(Long chatRoomId, Long userId);
     // Edit message
     Message editMessage(Long messageId, String newContent);
     // Mark all messages in chat as delivered

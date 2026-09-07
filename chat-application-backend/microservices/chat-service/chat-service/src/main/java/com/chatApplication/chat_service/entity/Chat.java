@@ -17,17 +17,29 @@ import java.time.LocalDateTime;
 public class Chat {
     @Id
     @GeneratedValue(strategy= GenerationType.IDENTITY)
-    private Long senderId;
-    
+    private Long id;
+
     private String name;
     private Boolean isGroup;
     private String groupIcon;
     private Long createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Boolean active;
+
+    @Builder.Default
+    private Boolean active = true;
+
     @PrePersist
     public void create(){
-        createdAt=LocalDateTime.now();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (active == null) {
+            active = true;
+        }
+    }
+
+    @PreUpdate
+    public void update(){
+        updatedAt = LocalDateTime.now();
     }
 }

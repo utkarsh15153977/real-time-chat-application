@@ -3,7 +3,7 @@ package com.chatapplication.group_chat.repository;
 import com.chatapplication.group_chat.entitty.Group;
 import com.chatapplication.group_chat.entitty.GroupMessage;
 import com.chatapplication.group_chat.entitty.MessageStatus;
-import feign.Param;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

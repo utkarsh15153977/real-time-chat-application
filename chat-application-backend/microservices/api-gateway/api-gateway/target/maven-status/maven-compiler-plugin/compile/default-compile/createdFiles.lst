@@ -1,0 +1,3 @@
+com\chatApplication\api_gateway\filter\JwtAuthenticationFilter.class
+com\chatApplication\api_gateway\ApiGatewayApplication.class
+com\chatApplication\api_gateway\config\SecurityConfig.class

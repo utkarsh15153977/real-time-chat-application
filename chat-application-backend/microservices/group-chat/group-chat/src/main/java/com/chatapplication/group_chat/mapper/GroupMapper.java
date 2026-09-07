@@ -18,6 +18,8 @@ public interface GroupMapper {
      * Entity -> Response DTO
      */
     @Mapping(target = "groupId", source = "id")
+    @Mapping(target = "lastMessage", ignore = true)
+    @Mapping(target = "groupName", source = "name")
     @Mapping(target = "memberCount",
             expression = "java(group.getMembers() != null ? group.getMembers().size() : 0)")
     GroupResponse toResponse(Group group);
@@ -32,10 +34,15 @@ public interface GroupMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "members", ignore = true)
+    @Mapping(target = "messages", ignore = true)
+    @Mapping(target = "lastMessage", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "active", ignore = true)
-    @Mapping(target = "lastMessage", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
+    @Mapping(target = "memberCount", ignore = true)
+    @Mapping(target = "groupImage", ignore = true)
     Group toEntity(CreateGroupRequest request);
 
     /**
@@ -47,9 +54,15 @@ public interface GroupMapper {
     )
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "members", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "messages", ignore = true)
     @Mapping(target = "lastMessage", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "active", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
+    @Mapping(target = "memberCount", ignore = true)
+    @Mapping(target = "groupImage", ignore = true)
     void updateEntity(
             CreateGroupRequest request,
             @MappingTarget Group entity

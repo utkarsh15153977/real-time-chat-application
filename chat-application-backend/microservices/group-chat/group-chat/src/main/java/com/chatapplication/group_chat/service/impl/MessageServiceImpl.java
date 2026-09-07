@@ -1,12 +1,20 @@
 package com.chatapplication.group_chat.service.impl;
 
 import com.chatapplication.group_chat.dto.request.ChatMessageRequest;
+import com.chatapplication.group_chat.dto.request.EditMessageRequest;
+import com.chatapplication.group_chat.dto.request.ReactionRequest;
 import com.chatapplication.group_chat.dto.response.ChatMessageResponse;
+import com.chatapplication.group_chat.dto.response.ReactionResponse;
 import com.chatapplication.group_chat.entitty.ChatMessage;
 import com.chatapplication.group_chat.entitty.Conversation;
-import com.chatapplication.group_chat.enums.MessageStatus;
+import com.chatapplication.group_chat.entitty.MessageReaction;
+import com.chatapplication.group_chat.entitty.MessageStatus;
 import com.chatapplication.group_chat.exception.InvalidMessageException;
+import com.chatapplication.group_chat.exception.MessageAlreadyDeletedException;
+import com.chatapplication.group_chat.exception.MessageAlreadyEditedException;
 import com.chatapplication.group_chat.exception.MessageNotFoundException;
+import com.chatapplication.group_chat.exception.ReactionNotFoundException;
+import com.chatapplication.group_chat.exception.UnauthorizedException;
 import com.chatapplication.group_chat.mapper.ChatMessageMapper;
 import com.chatapplication.group_chat.mapper.MessageReactionMapper;
 import com.chatapplication.group_chat.repository.ChatMessageRepository;
@@ -18,11 +26,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import com.chatapplication.group_chat.dto.request.EditMessageRequest;
-import com.chatapplication.group_chat.exception.MessageAlreadyDeletedException;
-import com.chatapplication.group_chat.exception.MessageAlreadyEditedException;
-import com.chatapplication.group_chat.exception.UnauthorizedException;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -132,7 +142,6 @@ public class MessageServiceImpl implements MessageService {
                         .receiverId(request.getReceiverId())
                         .content(request.getContent())
                         .status(MessageStatus.SENT)
-                        .timestamp(LocalDateTime.now())
                         .edited(false)
                         .deleted(false)
                         .build();
@@ -184,7 +193,7 @@ public class MessageServiceImpl implements MessageService {
             );
         }
 
-        if (!message.getSenderId().equals(request.getSenderId())) {
+        if (!message.getSenderId().equals(request.getUserId())) {
             throw new UnauthorizedException(
                     "You can edit only your own messages."
             );
@@ -272,5 +281,112 @@ public class MessageServiceImpl implements MessageService {
 
             log.info("Message {} marked as delivered.", messageId);
         }
+    }
+
+    @Override
+    public void markSeen(Long messageId) {
+        ChatMessage message = getMessageOrThrow(messageId);
+        if (message.getStatus() != MessageStatus.SEEN) {
+            message.setStatus(MessageStatus.SEEN);
+            message.setSeenAt(LocalDateTime.now());
+            chatMessageRepository.save(message);
+            messagingTemplate.convertAndSendToUser(
+                    message.getSenderId().toString(),
+                    "/queue/message-status",
+                    chatMessageMapper.toResponse(message)
+            );
+        }
+    }
+
+    @Override
+    public void markAllAsSeen(Long senderId, Long receiverId) {
+        Conversation conversation = conversationRepository
+                .findConversation(senderId, receiverId)
+                .orElse(null);
+        if (conversation != null) {
+            List<ChatMessage> unread = chatMessageRepository
+                    .findByConversationAndReceiverIdAndStatus(
+                            conversation, receiverId, MessageStatus.SENT);
+            unread.forEach(msg -> {
+                msg.setStatus(MessageStatus.SEEN);
+                msg.setSeenAt(LocalDateTime.now());
+            });
+            chatMessageRepository.saveAll(unread);
+        }
+    }
+
+    @Override
+    public List<ChatMessageResponse> getConversation(Long senderId, Long receiverId) {
+        Conversation conversation = conversationRepository
+                .findConversation(senderId, receiverId)
+                .orElse(null);
+        if (conversation == null) {
+            return List.of();
+        }
+        return chatMessageMapper.toResponseList(
+                chatMessageRepository.findByConversationOrderByCreatedAtAsc(conversation));
+    }
+
+    @Override
+    public List<ChatMessageResponse> getRecentMessages(Long userId) {
+        List<ChatMessage> sent = chatMessageRepository.findBySenderIdOrderByCreatedAtDesc(userId);
+        List<ChatMessage> received = chatMessageRepository.findByReceiverIdOrderByCreatedAtDesc(userId);
+        Set<Long> seen = new HashSet<>();
+        List<ChatMessage> merged = new ArrayList<>();
+        for (ChatMessage m : sent) {
+            if (seen.add(m.getId())) merged.add(m);
+        }
+        for (ChatMessage m : received) {
+            if (seen.add(m.getId())) merged.add(m);
+        }
+        merged.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+        return chatMessageMapper.toResponseList(merged);
+    }
+
+    @Override
+    public long getUnreadCount(Long senderId, Long receiverId) {
+        Conversation conversation = conversationRepository
+                .findConversation(senderId, receiverId)
+                .orElse(null);
+        if (conversation == null) return 0;
+        return chatMessageRepository.countByConversationAndReceiverIdAndStatus(
+                conversation, receiverId, MessageStatus.SENT);
+    }
+
+    @Override
+    public ReactionResponse addReaction(ReactionRequest request) {
+        ChatMessage message = getMessageOrThrow(request.getMessageId());
+        Optional<MessageReaction> existing = messageReactionRepository
+                .findByChatMessageAndUserId(message, request.getUserId());
+        if (existing.isPresent()) {
+            MessageReaction reaction = existing.get();
+            reaction.setReactionType(request.getReactionType());
+            reaction.setUpdatedAt(LocalDateTime.now());
+            messageReactionRepository.save(reaction);
+            return messageReactionMapper.toResponse(reaction);
+        }
+        MessageReaction reaction = messageReactionMapper.toEntity(request);
+        reaction.setChatMessage(message);
+        messageReactionRepository.save(reaction);
+        return messageReactionMapper.toResponse(reaction);
+    }
+
+    @Override
+    public void removeReaction(Long reactionId) {
+        MessageReaction reaction = messageReactionRepository.findById(reactionId)
+                .orElseThrow(() -> new ReactionNotFoundException("Reaction not found: " + reactionId));
+        messageReactionRepository.delete(reaction);
+    }
+
+    @Override
+    public List<ReactionResponse> getMessageReactions(Long messageId) {
+        ChatMessage message = getMessageOrThrow(messageId);
+        return messageReactionMapper.toResponseList(
+                messageReactionRepository.findByChatMessage(message));
+    }
+
+    @Override
+    public boolean exists(Long messageId) {
+        return chatMessageRepository.existsByIdAndDeletedFalse(messageId);
     }
 }

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.chatApplication.api_gateway.config.GatewayRoutesConfigTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.751 s -- in com.chatApplication.api_gateway.config.GatewayRoutesConfigTest

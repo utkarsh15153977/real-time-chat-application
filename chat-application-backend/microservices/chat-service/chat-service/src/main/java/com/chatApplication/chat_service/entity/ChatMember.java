@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="chat_members")
+@Table(name="chat_members",
+       uniqueConstraints = {
+           @UniqueConstraint(columnNames = {"chat_id", "user_id"})
+       })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,15 +20,24 @@ import java.time.LocalDateTime;
 public class ChatMember {
     @Id
     @GeneratedValue(strategy= GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "chat_id", nullable = false)
     private Long chatId;
+
+    @Column(name = "user_id", nullable = false)
     private Long userId;
-    private Boolean admin;
+
+    @Builder.Default
+    private Boolean admin = false;
+
     private LocalDateTime joinedAt;
 
     @PrePersist
     public void create(){
-
-        joinedAt= LocalDateTime.now();
-
+        joinedAt = LocalDateTime.now();
+        if (admin == null) {
+            admin = false;
+        }
     }
 }

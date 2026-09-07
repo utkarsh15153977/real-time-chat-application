@@ -61,4 +61,21 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             """)
     List<Message> findRecentMessages(
             @Param("userId") String userId);
+
+    /**
+     * Find unread messages in a conversation where the sender is senderId
+     * and receiver is recipientId, and the status is not yet READ.
+     * Used by the READ_ACK handler to bulk-mark messages as read.
+     */
+    @Query("""
+            SELECT m
+            FROM Message m
+            WHERE m.senderId = :senderId
+            AND m.receiverId = :recipientId
+            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+            ORDER BY m.timestamp ASC
+            """)
+    List<Message> findUnreadMessagesInConversation(
+            @Param("senderId") String senderId,
+            @Param("recipientId") String recipientId);
 }

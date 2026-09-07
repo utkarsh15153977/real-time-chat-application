@@ -190,27 +190,35 @@ import com.chatApplication.message_service.kafka.MessageProducer;
 import com.chatApplication.message_service.repository.MessageRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Core message service implementation.
+ * <p>
+ * Handles message persistence, WebSocket delivery, Redis Pub/Sub
+ * for cross-instance synchronization, and Kafka event publishing.
+ * <p>
+ * Delivery flow:
+ *   1. Persist message to PostgreSQL with SENT status
+ *   2. Send to receiver's STOMP queue via SimpMessagingTemplate (local)
+ *   3. Publish to Redis "chat:messages" channel (cross-instance)
+ *   4. Publish to Kafka "message-events" topic (async consumers)
+ */
+@Slf4j
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageProducer messageProducer;
-
-    public MessageServiceImpl(MessageRepository messageRepository,
-                              SimpMessagingTemplate messagingTemplate,
-                              MessageProducer messageProducer){
-        this.messageRepository = messageRepository;
-        this.messagingTemplate = messagingTemplate;
-        this.messageProducer = messageProducer;
-    }
+    private final RedisMessagePublisher redisMessagePublisher;
 
 //    @Override
 //    public MessageResponse sendMessage(
@@ -261,7 +269,7 @@ public class MessageServiceImpl implements MessageService {
         Message savedMessage =
                 messageRepository.save(message);
 
-        // WebSocket Real-Time Delivery
+        // Build the WebSocket payload DTO
         ChatMessage chatMessage =
                 ChatMessage.builder()
                         .msgId(savedMessage.getMsgId())
@@ -271,12 +279,19 @@ public class MessageServiceImpl implements MessageService {
                         .status(savedMessage.getStatus().name())
                         .build();
 
+        // 1. Local WebSocket delivery: send to receiver's STOMP queue
+        //    on this server instance
         messagingTemplate.convertAndSendToUser(
                 savedMessage.getReceiverId(),
                 "/queue/messages",
                 chatMessage);
 
-        // Kafka Event Publish
+        // 2. Redis Pub/Sub: publish to "chat:messages" channel so all
+        //    other message-service instances relay the message to their
+        //    connected WebSocket clients
+        redisMessagePublisher.publish(chatMessage);
+
+        // 3. Kafka: publish event for async consumers (notifications, analytics, etc.)
         messageProducer.publish(
                 MessageEvent.builder()
                         .messageId(savedMessage.getMsgId())
@@ -386,7 +401,7 @@ public class MessageServiceImpl implements MessageService {
                         .orElseThrow();
 
         message.setStatus(
-                MessageStatus.SEEN);
+                MessageStatus.READ);
 
         Message updated =
                 messageRepository.save(message);
@@ -409,7 +424,7 @@ public class MessageServiceImpl implements MessageService {
         for (Message message : messages) {
 
             message.setStatus(
-                    MessageStatus.SEEN);
+                    MessageStatus.READ);
         }
 
         messageRepository.saveAll(messages);

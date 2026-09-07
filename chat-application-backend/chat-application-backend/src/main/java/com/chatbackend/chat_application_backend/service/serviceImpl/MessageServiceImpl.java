@@ -1,5 +1,6 @@
 package com.chatbackend.chat_application_backend.service.serviceImpl;
 
+import com.chatbackend.chat_application_backend.dto.StatusAckDTO;
 import com.chatbackend.chat_application_backend.entity.ChatRoom;
 import com.chatbackend.chat_application_backend.entity.Message;
 import com.chatbackend.chat_application_backend.entity.MessageStatus;
@@ -11,43 +12,54 @@ import com.chatbackend.chat_application_backend.repository.ChatRepository;
 import com.chatbackend.chat_application_backend.repository.MessageRepository;
 import com.chatbackend.chat_application_backend.repository.UserRepository;
 import com.chatbackend.chat_application_backend.service.MessageService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class MessageServiceImpl implements MessageService {
+
     private final MessageRepository messageRepository;
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public  MessageServiceImpl(MessageRepository messageRepository, ChatRepository chatRepository, UserRepository userRepository) {
-        this.messageRepository = messageRepository;
-        this.chatRepository = chatRepository;
-        this.userRepository = userRepository;
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
-    private static final Logger log = LoggerFactory.getLogger(MessageServiceImpl.class);
+    private ChatRoom getChatRoomOrThrow(Long chatRoomId) {
+        return chatRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ChatNotFoundException("Chat room not found"));
+    }
+
+    private void sendAckEvent(Long chatRoomId, Long messageId, Long userId, MessageStatus status) {
+        StatusAckDTO ack = new StatusAckDTO(
+                messageId, chatRoomId, userId, status, LocalDateTime.now());
+        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId + "/ack", ack);
+    }
 
     @Override
     @CacheEvict(value = "chatMessages", key = "#chatRoomId")
-    public Message sendMessage(Long senderId, String content, Long chatRoomId){
-        log.info("Sending message from Id : {}", senderId);
-        if(content == null || content.trim().isEmpty()){
+    public Message sendMessage(Long senderId, String content, Long chatRoomId) {
+        log.info("Sending message from Id: {}", senderId);
+        if (content == null || content.trim().isEmpty()) {
             throw new IllegalArgumentException("Message content cannot be empty");
         }
 
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new UserNotFoundException("Sender not found"));
-
-        ChatRoom chatRoom = chatRepository.findById(chatRoomId)
-                .orElseThrow(() -> new ChatNotFoundException("Chat room not found"));
+        User sender = getUserOrThrow(senderId);
+        ChatRoom chatRoom = getChatRoomOrThrow(chatRoomId);
 
         Message message = Message.builder()
                 .sender(sender)
@@ -62,22 +74,18 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     @Cacheable(value = "chatMessages", key = "#chatRoomId")
-    public List<Message> getMessagesByChatRoom(Long chatRoomId){
+    public List<Message> getMessagesByChatRoom(Long chatRoomId) {
         log.info("Fetching messages for chatRoom {}", chatRoomId);
-        chatRepository.findById(chatRoomId)
-                .orElseThrow(() ->
-                        new ChatNotFoundException("Chat room not found"));
+        getChatRoomOrThrow(chatRoomId);
         return messageRepository.findByChatRoom_IdOrderByTimestampAsc(chatRoomId);
     }
 
     @Override
     @Cacheable(value = "messages", key = "#messageId")
-    public Message getMessage(Long messageId){
-        log.info("Sending message from Id : {}", messageId);
+    public Message getMessage(Long messageId) {
+        log.info("Fetching message {}", messageId);
         return messageRepository.findById(messageId)
-                .orElseThrow(() ->
-                        new MessageNotFoundException("Message not found with id: "
-                                + messageId));
+                .orElseThrow(() -> new MessageNotFoundException("Message not found with id: " + messageId));
     }
 
     @Override
@@ -108,6 +116,38 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @Transactional
+    public void markAsDelivered(Long messageId, Long userId) {
+        log.info("Marking message {} as DELIVERED by user {}", messageId, userId);
+        Message message = getMessage(messageId);
+        message.setStatus(MessageStatus.DELIVERED);
+        messageRepository.save(message);
+        sendAckEvent(message.getChatRoom().getId(), messageId, userId, MessageStatus.DELIVERED);
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Long chatRoomId, Long userId) {
+        log.info("Marking all messages in chat {} as READ by user {}", chatRoomId, userId);
+        ChatRoom chatRoom = getChatRoomOrThrow(chatRoomId);
+        List<Message> messages = messageRepository.findByChatRoom_IdOrderByTimestampAsc(chatRoomId);
+
+        int updatedCount = 0;
+        for (Message message : messages) {
+            if (!message.getSender().getId().equals(userId)
+                    && (message.getStatus() == MessageStatus.SENT || message.getStatus() == MessageStatus.DELIVERED)) {
+                message.setStatus(MessageStatus.READ);
+                updatedCount++;
+            }
+        }
+
+        if (updatedCount > 0) {
+            messageRepository.saveAll(messages);
+            sendAckEvent(chatRoomId, null, userId, MessageStatus.READ);
+        }
+    }
+
+    @Override
     @Caching(evict = {
             @CacheEvict(value = "messages", key = "#messageId"),
             @CacheEvict(value = "chatMessages", key = "#message.chatRoom.id")
@@ -122,12 +162,8 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public void markAllMessagesDelivered(Long chatRoomId, Long userId) {
         log.info("Marking messages delivered for chat {}", chatRoomId);
-
-        chatRepository.findById(chatRoomId)
-                .orElseThrow(() ->
-                        new ChatNotFoundException("Chat room not found"));
-        List<Message> messages = messageRepository
-                .findByChatRoom_IdOrderByTimestampAsc(chatRoomId);
+        getChatRoomOrThrow(chatRoomId);
+        List<Message> messages = messageRepository.findByChatRoom_IdOrderByTimestampAsc(chatRoomId);
         for (Message message : messages) {
             if (!message.getSender().getId().equals(userId)
                     && message.getStatus() == MessageStatus.SENT) {
@@ -140,12 +176,8 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public void markAllMessagesRead(Long chatRoomId, Long userId) {
         log.info("Marking messages read for chat {}", chatRoomId);
-
-        chatRepository.findById(chatRoomId)
-                .orElseThrow(() ->
-                        new ChatNotFoundException("Chat room not found"));
-        List<Message> messages = messageRepository
-                .findByChatRoom_IdOrderByTimestampAsc(chatRoomId);
+        getChatRoomOrThrow(chatRoomId);
+        List<Message> messages = messageRepository.findByChatRoom_IdOrderByTimestampAsc(chatRoomId);
         for (Message message : messages) {
             if (!message.getSender().getId().equals(userId)
                     && message.getStatus() == MessageStatus.DELIVERED) {
@@ -156,19 +188,15 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public long getUnreadMessageCount(Long userId, Long chatRoomId){
-    //log.info("Marking messages read for chat {}", chatRoomId);
-
-        log.info("Fetching unread message count for user {}", userId);
+    public long getUnreadMessageCount(Long userId, Long chatRoomId) {
+        log.info("Fetching unread message count for user {} in chat {}", userId, chatRoomId);
         return messageRepository.countByChatRoom_IdAndSender_IdNotAndStatus(
-                chatRoomId,
-                userId,
-                MessageStatus.READ);
+                chatRoomId, userId, MessageStatus.READ);
     }
 
     @Override
-    public List<Message> searchMessages(Long chatRoomId, String keyword){
-        log.info("Searching messages for chat {}", chatRoomId);
+    public List<Message> searchMessages(Long chatRoomId, String keyword) {
+        log.info("Searching messages for chat {} with keyword {}", chatRoomId, keyword);
         return messageRepository.findByChatRoom_IdAndContentContainingIgnoreCase(chatRoomId, keyword);
     }
 }

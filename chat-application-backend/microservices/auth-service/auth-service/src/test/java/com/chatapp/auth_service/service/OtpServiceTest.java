@@ -1,14 +1,19 @@
 package com.chatapp.auth_service.service;
 
+import com.chatapp.auth_service.config.TestConfig;
 import com.chatapp.auth_service.entity.OtpPurpose;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@ContextConfiguration(classes = {TestConfig.class})
+@ActiveProfiles("test")
 class OtpServiceTest {
 
     @Autowired

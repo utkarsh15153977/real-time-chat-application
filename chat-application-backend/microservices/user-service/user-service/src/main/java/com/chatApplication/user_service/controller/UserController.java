@@ -1,8 +1,10 @@
-package com.chatApplication.user_service.service;
+package com.chatApplication.user_service.controller;
 
 import com.chatApplication.user_service.dto.UpdateUserRequest;
 import com.chatApplication.user_service.dto.UserResponse;
 import com.chatApplication.user_service.dto.UserStatusRequest;
+import com.chatApplication.user_service.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +29,7 @@ public class UserController {
     @PutMapping("/{id}")
     public UserResponse updateUser(
             @PathVariable Long id,
-            @RequestBody
+            @Valid @RequestBody
             UpdateUserRequest request){
 
         return service.updateUser(

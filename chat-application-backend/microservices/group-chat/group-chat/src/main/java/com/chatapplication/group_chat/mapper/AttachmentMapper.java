@@ -24,8 +24,9 @@ public interface AttachmentMapper {
      * Request DTO -> Entity
      */
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "message", ignore = true)
-    @Mapping(target = "uploadedAt", ignore = true)
+    @Mapping(target = "chatMessage", ignore = true)
+    @Mapping(target = "groupMessage", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     Attachment toEntity(AttachmentRequest request);
 
     /**
@@ -35,8 +36,9 @@ public interface AttachmentMapper {
             nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
     )
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "message", ignore = true)
-    @Mapping(target = "uploadedAt", ignore = true)
+    @Mapping(target = "chatMessage", ignore = true)
+    @Mapping(target = "groupMessage", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void updateEntity(
             AttachmentRequest request,
             @MappingTarget Attachment attachment

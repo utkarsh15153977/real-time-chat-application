@@ -5,8 +5,9 @@ import lombok.Data;
 
 @Data
 public class ChatRequest {
-    @NotNull
+    @NotNull(message = "Sender ID is required")
     private Long senderId;
-    @NotNull
+
+    @NotNull(message = "Receiver ID is required")
     private Long receiverId;
 }

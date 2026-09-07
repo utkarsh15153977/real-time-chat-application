@@ -15,4 +15,6 @@ public interface ChatRepository extends JpaRepository<ChatRoom, Long> {
 
     @EntityGraph(attributePaths = "participants")
     List<ChatRoom> findByParticipantsContaining(User user);
+
+    Optional<ChatRoom> findByInviteCode(String inviteCode);
 }

@@ -1,5 +1,6 @@
 package com.chatApplication.message_service.controller;
 
+import com.chatApplication.message_service.dto.ChatMessage;
 import com.chatApplication.message_service.dto.TypingEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;

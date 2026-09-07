@@ -6,6 +6,7 @@ import com.chatApplication.chat_service.dto.GroupRequest;
 import com.chatApplication.chat_service.entity.Chat;
 import com.chatApplication.chat_service.entity.ChatMember;
 import com.chatApplication.chat_service.exception.ChatNotFoundException;
+import com.chatApplication.chat_service.exception.DuplicateMemberException;
 import com.chatApplication.chat_service.exception.GroupNotFoundException;
 import com.chatApplication.chat_service.exception.MemberNotFoundException;
 import com.chatApplication.chat_service.repository.ChatMemberRepository;
@@ -31,24 +32,36 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private ChatResponse map(Chat chat) {
-        return new ChatResponse(
-                chat.getId(),
-                chat.getName(),
-                chat.getIsGroup(),
-                chat.getGroupIcon()
-        );
+        return ChatResponse.builder()
+                .chatId(chat.getId())
+                .name(chat.getName())
+                .group(chat.getIsGroup())
+                .groupIcon(chat.getGroupIcon())
+                .build();
     }
 
-    // Create Private Chat
     @Override
     @Transactional
     public ChatResponse createPrivateChat(ChatRequest chatRequest) {
+        Long senderId = chatRequest.getSenderId();
+        Long receiverId = chatRequest.getReceiverId();
+
+        if (senderId.equals(receiverId)) {
+            throw new IllegalArgumentException("Cannot create a private chat with yourself");
+        }
+
+        java.util.Optional<Chat> existingChat =
+                chatRepository.findPrivateChatBetween(senderId, receiverId);
+
+        if (existingChat.isPresent()) {
+            return map(existingChat.get());
+        }
 
         Chat chat = Chat.builder()
                 .isGroup(false)
                 .name(null)
                 .groupIcon(null)
-                .createdBy(chatRequest.getSenderId())
+                .createdBy(senderId)
                 .build();
 
         chat = chatRepository.save(chat);
@@ -56,7 +69,7 @@ public class ChatServiceImpl implements ChatService {
         chatMemberRepository.save(
                 ChatMember.builder()
                         .chatId(chat.getId())
-                        .userId(chatRequest.getSenderId())
+                        .userId(senderId)
                         .admin(false)
                         .build()
         );
@@ -64,7 +77,7 @@ public class ChatServiceImpl implements ChatService {
         chatMemberRepository.save(
                 ChatMember.builder()
                         .chatId(chat.getId())
-                        .userId(chatRequest.getReceiverId())
+                        .userId(receiverId)
                         .admin(false)
                         .build()
         );
@@ -72,16 +85,11 @@ public class ChatServiceImpl implements ChatService {
         return map(chat);
     }
 
-    // Create Group Chat
     @Override
     @Transactional
     public ChatResponse createGroupChat(GroupRequest groupRequest) {
-
-        if (groupRequest.getName() == null ||
-                groupRequest.getName().isBlank()) {
-            throw new IllegalArgumentException(
-                    "Group name cannot be empty"
-            );
+        if (groupRequest.getName() == null || groupRequest.getName().isBlank()) {
+            throw new IllegalArgumentException("Group name cannot be empty");
         }
 
         Chat chat = Chat.builder()
@@ -93,7 +101,6 @@ public class ChatServiceImpl implements ChatService {
 
         chat = chatRepository.save(chat);
 
-        // Admin
         chatMemberRepository.save(
                 ChatMember.builder()
                         .chatId(chat.getId())
@@ -102,14 +109,11 @@ public class ChatServiceImpl implements ChatService {
                         .build()
         );
 
-        // Members
         if (groupRequest.getMembers() != null) {
             for (Long member : groupRequest.getMembers()) {
-
                 if (member.equals(groupRequest.getAdminId())) {
                     continue;
                 }
-
                 chatMemberRepository.save(
                         ChatMember.builder()
                                 .chatId(chat.getId())
@@ -123,184 +127,98 @@ public class ChatServiceImpl implements ChatService {
         return map(chat);
     }
 
-    // Get All Chats of User
     @Override
     public List<ChatResponse> getAllChats(Long userId) {
-
-        List<ChatMember> chatMembers =
-                chatMemberRepository.findByUserId(userId);
-
-        List<ChatResponse> responses =
-                new ArrayList<>();
+        List<ChatMember> chatMembers = chatMemberRepository.findByUserId(userId);
+        List<ChatResponse> responses = new ArrayList<>();
 
         for (ChatMember member : chatMembers) {
-
-            Chat chat =
-                    chatRepository.findById(member.getChatId())
-                            .orElseThrow(
-                                    () -> new ChatNotFoundException(
-                                            "Chat not found"
-                                    )
-                            );
-
+            Chat chat = chatRepository.findById(member.getChatId())
+                    .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + member.getChatId()));
             responses.add(map(chat));
         }
 
         return responses;
     }
 
-    // Add Member
     @Override
     @Transactional
-    public ChatResponse addGroupMember(
-            Long chatId,
-            Long userId
-    ) {
-
-        Chat chat =
-                chatRepository.findById(chatId)
-                        .orElseThrow(
-                                () -> new ChatNotFoundException(
-                                        "Chat not found"
-                                )
-                        );
+    public ChatResponse addGroupMember(Long chatId, Long userId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
 
         if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException(
-                    "Private chat"
-            );
+            throw new GroupNotFoundException("Chat is not a group");
         }
 
-        boolean exists =
-                chatMemberRepository
-                        .existsByChatIdAndUserId(
-                                chatId,
-                                userId
-                        );
+        boolean exists = chatMemberRepository.existsByChatIdAndUserId(chatId, userId);
 
-        if (!exists) {
-
-            chatMemberRepository.save(
-                    ChatMember.builder()
-                            .chatId(chatId)
-                            .userId(userId)
-                            .admin(false)
-                            .build()
-            );
+        if (exists) {
+            throw new DuplicateMemberException("User " + userId + " is already a member of chat " + chatId);
         }
+
+        chatMemberRepository.save(
+                ChatMember.builder()
+                        .chatId(chatId)
+                        .userId(userId)
+                        .admin(false)
+                        .build()
+        );
 
         return map(chat);
     }
 
-    // Remove Member
     @Override
     @Transactional
-    public void removeGroupMember(
-            Long chatId,
-            Long userId
-    ) {
+    public void removeGroupMember(Long chatId, Long userId) {
+        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, userId)
+                .orElseThrow(() -> new MemberNotFoundException(
+                        "Member not found in chat " + chatId));
 
-        List<ChatMember> members =
-                chatMemberRepository.findByChatId(chatId);
-
-        for (ChatMember member : members) {
-
-            if (member.getUserId().equals(userId)) {
-                chatMemberRepository.delete(member);
-                return;
-            }
-        }
-
-        throw new MemberNotFoundException(
-                "Member not found"
-        );
+        chatMemberRepository.delete(member);
     }
 
-    // Rename Group
     @Override
     @Transactional
-    public ChatResponse renameGroup(
-            Long chatId,
-            String newName
-    ) {
-
-        Chat chat =
-                chatRepository.findById(chatId)
-                        .orElseThrow(
-                                () -> new ChatNotFoundException(
-                                        "Chat not found"
-                                )
-                        );
+    public ChatResponse renameGroup(Long chatId, String newName) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
 
         if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException(
-                    "Private chat"
-            );
+            throw new GroupNotFoundException("Chat is not a group");
         }
 
-        if (newName == null ||
-                newName.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Invalid group name"
-            );
+        if (newName == null || newName.isBlank()) {
+            throw new IllegalArgumentException("Invalid group name");
         }
 
         chat.setName(newName);
-
         chatRepository.save(chat);
 
         return map(chat);
     }
 
-    // Leave Group
     @Override
     @Transactional
-    public void leaveGroup(
-            Long chatId,
-            Long userId
-    ) {
+    public void leaveGroup(Long chatId, Long userId) {
+        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, userId)
+                .orElseThrow(() -> new MemberNotFoundException(
+                        "Member not found in chat " + chatId));
 
-        List<ChatMember> members =
-                chatMemberRepository.findByChatId(chatId);
-
-        for (ChatMember member : members) {
-
-            if (member.getUserId().equals(userId)) {
-                chatMemberRepository.delete(member);
-                return;
-            }
-        }
-
-        throw new MemberNotFoundException(
-                "Member not found"
-        );
+        chatMemberRepository.delete(member);
     }
 
-    // Get Group Members
     @Override
-    public List<Long> getGroupMembers(
-            Long chatId
-    ) {
-
-        Chat chat =
-                chatRepository.findById(chatId)
-                        .orElseThrow(
-                                () -> new ChatNotFoundException(
-                                        "Chat not found"
-                                )
-                        );
+    public List<Long> getGroupMembers(Long chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
 
         if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException(
-                    "Private chat"
-            );
+            throw new GroupNotFoundException("Chat is not a group");
         }
 
-        List<ChatMember> members =
-                chatMemberRepository.findByChatId(chatId);
-
-        List<Long> result =
-                new ArrayList<>();
+        List<ChatMember> members = chatMemberRepository.findByChatId(chatId);
+        List<Long> result = new ArrayList<>();
 
         for (ChatMember member : members) {
             result.add(member.getUserId());
@@ -309,32 +227,18 @@ public class ChatServiceImpl implements ChatService {
         return result;
     }
 
-    // Delete Group
     @Override
     @Transactional
-    public void deleteGroup(
-            Long chatId
-    ) {
-
-        Chat chat =
-                chatRepository.findById(chatId)
-                        .orElseThrow(
-                                () -> new ChatNotFoundException(
-                                        "Chat not found"
-                                )
-                        );
+    public void deleteGroup(Long chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
 
         if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException(
-                    "Private chat"
-            );
+            throw new GroupNotFoundException("Chat is not a group");
         }
 
-        List<ChatMember> members =
-                chatMemberRepository.findByChatId(chatId);
-
+        List<ChatMember> members = chatMemberRepository.findByChatId(chatId);
         chatMemberRepository.deleteAll(members);
-
         chatRepository.delete(chat);
     }
 }

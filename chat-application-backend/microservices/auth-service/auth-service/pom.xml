@@ -93,15 +93,6 @@
 		</dependency>
 
 		<!-- ============================== -->
-		<!-- OPENFEIGN -->
-		<!-- ============================== -->
-
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-openfeign</artifactId>
-		</dependency>
-
-		<!-- ============================== -->
 		<!-- KAFKA -->
 		<!-- ============================== -->
 
@@ -180,6 +171,16 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
+		</dependency>
+
+		<!-- ============================== -->
+		<!-- H2 DATABASE (TESTS) -->
+		<!-- ============================== -->
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
 		</dependency>
 
 		<!-- ============================== -->
