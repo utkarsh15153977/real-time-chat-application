@@ -6,6 +6,8 @@ import com.chatApplication.message_service.dto.TypingEvent;
 import com.chatApplication.message_service.exception.MessageValidationException;
 import com.chatApplication.message_service.service.InboxService;
 import com.chatApplication.message_service.service.MessageService;
+import com.chatApplication.message_service.service.PushNotificationService;
+import com.chatApplication.message_service.service.UserPresenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -31,6 +33,10 @@ import java.security.Principal;
  * - /topic/room.{chatRoomId}: All subscribers in the chat room
  * - /user/{userId}/queue/messages: Direct message to specific user
  * - /user/{userId}/queue/inbox: Real-time inbox update (Phase 4)
+ * <p>
+ * Push Notifications (Phase 5):
+ * - If recipient is OFFLINE, a push notification is dispatched via FCM
+ *   to all registered devices asynchronously.
  */
 @Slf4j
 @Controller
@@ -40,6 +46,8 @@ public class ChatWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageService messageService;
     private final InboxService inboxService;
+    private final UserPresenceService userPresenceService;
+    private final PushNotificationService pushNotificationService;
 
     /**
      * Handles incoming chat messages via STOMP.
@@ -85,6 +93,13 @@ public class ChatWebSocketController {
             // 4. Send real-time inbox update to recipient (Phase 4)
             inboxService.notifyInboxUpdate(responseDTO);
 
+            // 5. Push notification for offline recipients (Phase 5)
+            notifyOfflineRecipient(
+                    requestDTO.getRecipientId(),
+                    senderId,
+                    requestDTO.getContent(),
+                    requestDTO.getChatRoomId());
+
             log.info("Message broadcast: id={}, room={}",
                     responseDTO.getMessageId(),
                     requestDTO.getChatRoomId());
@@ -126,6 +141,39 @@ public class ChatWebSocketController {
                 event.getReceiverId(),
                 "/queue/typing",
                 event);
+    }
+
+    /**
+     * Checks recipient presence and dispatches a push notification if offline.
+     * <p>
+     * Push dispatch is asynchronous and fire-and-forget. Errors are logged
+     * but do not affect message delivery.
+     *
+     * @param recipientId the recipient user ID
+     * @param senderId    the sender user ID (used as notification title)
+     * @param content     the message content preview
+     * @param chatRoomId  the chat room identifier
+     */
+    private void notifyOfflineRecipient(
+            String recipientId,
+            String senderId,
+            String content,
+            String chatRoomId) {
+
+        try {
+            if (!userPresenceService.isUserConnected(recipientId)) {
+                log.debug("Recipient {} is offline, dispatching push notification", recipientId);
+                pushNotificationService.sendPushNotificationToUser(
+                        recipientId,
+                        senderId,
+                        content,
+                        chatRoomId);
+            }
+        } catch (Exception e) {
+            // Never let push notification failure affect message delivery
+            log.warn("Failed to check presence or send push for recipient {}: {}",
+                    recipientId, e.getMessage());
+        }
     }
 
     /**

@@ -56,6 +56,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/inbox/**").permitAll()
                         // Media upload API (Gateway-injected X-User-Id)
                         .requestMatchers("/api/v1/media/**").permitAll()
+                        // Device token registration API (Gateway-injected X-User-Id)
+                        .requestMatchers("/api/v1/devices/**").permitAll()
                         // Presence REST API (Gateway-injected X-User-Id)
                         .requestMatchers("/api/presence/**").permitAll()
                         // WebSocket handshake (authenticated by WebSocketAuthInterceptor)
