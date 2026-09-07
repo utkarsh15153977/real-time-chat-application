@@ -139,18 +139,9 @@ class MessageStatusServiceTest {
         @Test
         @DisplayName("should not transition READ message to DELIVERED (backwards)")
         void markAsDelivered_readMessage_returnsNull() {
-            Message readMessage = Message.builder()
-                    .msgId(3L)
-                    .senderId("user1")
-                    .receiverId("user2")
-                    .status(MessageStatus.READ)
-                    .readAt(Instant.now())
-                    .build();
-
             when(messageRepository.updateMessageStatus(
                     eq(3L), eq("user2"), eq(MessageStatus.DELIVERED), eq(null)))
                     .thenReturn(0);
-            when(messageRepository.findById(3L)).thenReturn(Optional.of(readMessage));
 
             MessageStatusUpdateDTO result = messageService.markAsDelivered("3", "user2");
 
@@ -239,18 +230,9 @@ class MessageStatusServiceTest {
         @Test
         @DisplayName("should handle idempotent READ -> READ transition")
         void markAsRead_alreadyRead_returnsNull() {
-            Message alreadyReadMessage = Message.builder()
-                    .msgId(4L)
-                    .senderId("user1")
-                    .receiverId("user2")
-                    .status(MessageStatus.READ)
-                    .readAt(Instant.now())
-                    .build();
-
             when(messageRepository.updateMessageStatus(
                     eq(4L), eq("user2"), eq(MessageStatus.READ), any(Instant.class)))
                     .thenReturn(0);
-            when(messageRepository.findById(4L)).thenReturn(Optional.of(alreadyReadMessage));
 
             MessageStatusUpdateDTO result = messageService.markAsRead("4", "user2");
 

@@ -190,7 +190,7 @@ import com.chatApplication.message_service.exception.MessageValidationException;
 import com.chatApplication.message_service.kafka.MessageEvent;
 import com.chatApplication.message_service.kafka.MessageProducer;
 import com.chatApplication.message_service.repository.MessageRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

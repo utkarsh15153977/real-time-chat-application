@@ -78,8 +78,8 @@
         <!-- Nimbus JOSE+JWT for JWK Set verification (RS256/asymmetric JWT) -->
         <dependency>
             <groupId>com.nimbusds</groupId>
-            <artifactId>nimbus-jose-jwk</artifactId>
-            <version>9.37.3</version>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>9.47</version>
         </dependency>
 
         <!-- Test dependencies -->

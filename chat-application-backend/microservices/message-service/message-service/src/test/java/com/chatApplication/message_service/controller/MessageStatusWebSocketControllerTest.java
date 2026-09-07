@@ -6,6 +6,7 @@ import com.chatApplication.message_service.entity.MessageStatus;
 import com.chatApplication.message_service.service.MessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -137,7 +138,7 @@ class MessageStatusWebSocketControllerTest {
             controller.markDelivered(request, principal);
 
             verify(messageService).markAsDelivered("99", "user2");
-            verify(messagingTemplate, never()).convertAndSend(anyString(), any());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
             verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());
         }
 
@@ -174,7 +175,7 @@ class MessageStatusWebSocketControllerTest {
             // Should not throw exception
             controller.markDelivered(request, principal);
 
-            verify(messagingTemplate, never()).convertAndSend(anyString(), any());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
         }
     }
 
@@ -227,7 +228,7 @@ class MessageStatusWebSocketControllerTest {
 
             controller.markRead(request, principal);
 
-            verify(messagingTemplate, never()).convertAndSend(anyString(), any());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
         }
 
         @Test
@@ -296,7 +297,7 @@ class MessageStatusWebSocketControllerTest {
             controller.markRoomRead(request, principal);
 
             // Verify no broadcast (empty message list)
-            verify(messagingTemplate, never()).convertAndSend(anyString(), any());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
         }
 
         @Test
@@ -328,7 +329,7 @@ class MessageStatusWebSocketControllerTest {
             // Should not throw exception
             controller.markRoomRead(request, principal);
 
-            verify(messagingTemplate, never()).convertAndSend(anyString(), any());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
         }
     }
 
@@ -353,7 +354,7 @@ class MessageStatusWebSocketControllerTest {
 
             verify(messageService, never()).markAsDelivered(anyString(), anyString());
             verify(messageService, never()).markAsRead(anyString(), anyString());
-            verify(messagingTemplate, never()).convertAndSend(anyString(), any());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
         }
 
         @Test

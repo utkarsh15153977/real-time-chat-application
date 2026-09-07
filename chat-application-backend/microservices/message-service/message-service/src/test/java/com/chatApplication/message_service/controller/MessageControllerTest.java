@@ -156,7 +156,7 @@ class MessageControllerTest {
 
             mockMvc.perform(put("/api/messages/{messageId}/seen", 1L))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("SEEN"));
+                    .andExpect(jsonPath("$.status").value("READ"));
         }
     }
 

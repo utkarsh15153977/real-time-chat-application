@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         // Message REST API (Gateway-injected X-User-Id)
                         .requestMatchers("/api/messages/**").permitAll()
+                        // Inbox REST API (Gateway-injected X-User-Id)
+                        .requestMatchers("/api/v1/inbox/**").permitAll()
                         // Media upload API (Gateway-injected X-User-Id)
                         .requestMatchers("/api/v1/media/**").permitAll()
                         // Presence REST API (Gateway-injected X-User-Id)

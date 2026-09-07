@@ -3,6 +3,7 @@ package com.chatApplication.message_service.controller;
 import com.chatApplication.message_service.dto.ChatMessageRequestDTO;
 import com.chatApplication.message_service.dto.ChatMessageResponseDTO;
 import com.chatApplication.message_service.entity.MessageType;
+import com.chatApplication.message_service.service.InboxService;
 import com.chatApplication.message_service.service.MessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +40,9 @@ class ChatWebSocketControllerTest {
 
     @Mock
     private MessageService messageService;
+
+    @Mock
+    private InboxService inboxService;
 
     @InjectMocks
     private ChatWebSocketController controller;
@@ -119,6 +123,9 @@ class ChatWebSocketControllerTest {
                 eq("user2"),
                 eq("/queue/messages"),
                 eq(textResponse));
+
+        // Verify inbox update notification (Phase 4)
+        verify(inboxService).notifyInboxUpdate(textResponse);
     }
 
     @Test
@@ -141,6 +148,9 @@ class ChatWebSocketControllerTest {
                 eq("user2"),
                 eq("/queue/messages"),
                 eq(imageResponse));
+
+        // Verify inbox update notification (Phase 4)
+        verify(inboxService).notifyInboxUpdate(imageResponse);
     }
 
     @Test
@@ -160,7 +170,10 @@ class ChatWebSocketControllerTest {
 
         // Verify no broadcast to room (message was not persisted)
         verify(messagingTemplate, never()).convertAndSend(
-                anyString(), any());
+                anyString(), any(Object.class));
+
+        // Verify no inbox update (message failed)
+        verify(inboxService, never()).notifyInboxUpdate(any());
     }
 
     @Test
@@ -179,7 +192,10 @@ class ChatWebSocketControllerTest {
 
         // Verify no broadcast to room
         verify(messagingTemplate, never()).convertAndSend(
-                anyString(), any());
+                anyString(), any(Object.class));
+
+        // Verify no inbox update (message failed)
+        verify(inboxService, never()).notifyInboxUpdate(any());
     }
 
     @Test
@@ -226,6 +242,6 @@ class ChatWebSocketControllerTest {
         controller.sendMessage(textRequest, null);
 
         verify(messageService, never()).saveMessage(any());
-        verify(messagingTemplate, never()).convertAndSend(anyString(), any());
+        verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
     }
 }

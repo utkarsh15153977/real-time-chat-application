@@ -2,6 +2,7 @@ package com.chatApplication.message_service.repository;
 
 import com.chatApplication.message_service.entity.Message;
 import com.chatApplication.message_service.entity.MessageStatus;
+import com.chatApplication.message_service.entity.MessageType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -179,4 +181,89 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findUnreadMessagesInChatRoom(
             @Param("chatRoomId") String chatRoomId,
             @Param("readerId") String readerId);
+
+    // ================================================================
+    // Inbox Overview Queries (Phase 4)
+    // ================================================================
+
+    /**
+     * Count total unread messages for a user across all conversations.
+     * Used for badge display on the inbox icon.
+     *
+     * @param userId the user ID to count unread messages for
+     * @return total number of unread messages
+     */
+    @Query("""
+            SELECT COUNT(m)
+            FROM Message m
+            WHERE m.receiverId = :userId
+            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+            """)
+    long countTotalUnreadMessages(@Param("userId") String userId);
+
+    /**
+     * Find the latest message for each conversation where the user is a participant.
+     * Returns results ordered by timestamp descending for inbox display.
+     * <p>
+     * This query uses a subquery approach to avoid N+1 overhead:
+     * - Finds all distinct conversation partners
+     * - Retrieves the latest message for each conversation
+     * <p>
+     * Note: For high-performance production use, consider a native query with
+     * window functions. This JPQL version is optimized for correctness.
+     *
+     * @param userId the user ID whose inbox to fetch
+     * @return list of latest messages per conversation (newest first)
+     */
+    @Query("""
+            SELECT m FROM Message m
+            WHERE m.msgId IN (
+                SELECT MAX(m2.msgId) FROM Message m2
+                WHERE m2.senderId = :userId OR m2.receiverId = :userId
+                GROUP BY
+                    CASE
+                        WHEN m2.senderId = :userId THEN m2.receiverId
+                        ELSE m2.senderId
+                    END
+            )
+            ORDER BY m.timestamp DESC
+            """)
+    List<Message> findLatestMessagesPerConversation(@Param("userId") String userId);
+
+    /**
+     * Count unread messages in a specific conversation for a user.
+     *
+     * @param userId    the user ID
+     * @param partnerId the conversation partner's user ID
+     * @return number of unread messages from partnerId to userId
+     */
+    @Query("""
+            SELECT COUNT(m)
+            FROM Message m
+            WHERE m.senderId = :partnerId
+            AND m.receiverId = :userId
+            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+            """)
+    long countUnreadInConversation(
+            @Param("userId") String userId,
+            @Param("partnerId") String partnerId);
+
+    /**
+     * Find the last message between two specific users.
+     * Used for real-time inbox updates when a new message arrives.
+     *
+     * @param user1 first user ID
+     * @param user2 second user ID
+     * @return the most recent message between the two users, or null
+     */
+    @Query("""
+            SELECT m FROM Message m
+            WHERE (m.senderId = :user1 AND m.receiverId = :user2)
+               OR (m.senderId = :user2 AND m.receiverId = :user1)
+            ORDER BY m.timestamp DESC
+            """)
+    List<Message> findLastMessageBetweenUsers(
+            @Param("user1") String user1,
+            @Param("user2") String user2,
+            Pageable pageable);
 }

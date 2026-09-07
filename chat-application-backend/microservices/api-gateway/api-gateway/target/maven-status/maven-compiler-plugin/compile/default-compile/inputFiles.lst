@@ -1,3 +1,5 @@
 F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\api-gateway\api-gateway\src\main\java\com\chatApplication\api_gateway\ApiGatewayApplication.java
+F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\api-gateway\api-gateway\src\main\java\com\chatApplication\api_gateway\config\RedisConfig.java
 F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\api-gateway\api-gateway\src\main\java\com\chatApplication\api_gateway\filter\JwtAuthenticationFilter.java
+F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\api-gateway\api-gateway\src\main\java\com\chatApplication\api_gateway\config\SecurityLogUtils.java
 F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\api-gateway\api-gateway\src\main\java\com\chatApplication\api_gateway\config\SecurityConfig.java

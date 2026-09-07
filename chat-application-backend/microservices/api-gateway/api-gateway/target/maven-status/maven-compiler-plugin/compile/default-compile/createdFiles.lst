@@ -1,3 +1,5 @@
+com\chatApplication\api_gateway\config\RedisConfig.class
 com\chatApplication\api_gateway\filter\JwtAuthenticationFilter.class
 com\chatApplication\api_gateway\ApiGatewayApplication.class
 com\chatApplication\api_gateway\config\SecurityConfig.class
+com\chatApplication\api_gateway\config\SecurityLogUtils.class

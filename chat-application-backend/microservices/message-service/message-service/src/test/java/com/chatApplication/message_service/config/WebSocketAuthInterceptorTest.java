@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
@@ -54,7 +55,7 @@ class WebSocketAuthInterceptorTest {
         interceptor = new WebSocketAuthInterceptor(redisTemplate, expiryManager);
         ReflectionTestUtils.setField(interceptor, "jwtSecret", SECRET);
         channel = mock(MessageChannel.class);
-        when(redisTemplate.hasKey(anyString())).thenReturn(false);
+        lenient().when(redisTemplate.hasKey(anyString())).thenReturn(false);
     }
 
     private String generateValidToken(String userId, String email) {
@@ -98,7 +99,7 @@ class WebSocketAuthInterceptorTest {
 
         assertThat(result).isNotNull();
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
         assertThat(resultAccessor.getUser()).isNotNull();
         assertThat(resultAccessor.getUser().getName()).isEqualTo("123");
@@ -124,7 +125,7 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
         assertThat(resultAccessor.getUser()).isNotNull();
         assertThat(resultAccessor.getUser().getName()).isEqualTo("456");
@@ -143,10 +144,10 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
-        assertThat(resultAccessor.getErrorMessage()).isNotNull();
-        assertThat(resultAccessor.getErrorMessage()).contains("Authentication required");
+        assertThat(resultAccessor.getHeader("error")).isNotNull();
+        assertThat((String) resultAccessor.getHeader("error")).contains("Authentication required");
     }
 
     @Test
@@ -162,10 +163,10 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
-        assertThat(resultAccessor.getErrorMessage()).isNotNull();
-        assertThat(resultAccessor.getErrorMessage()).contains("expired");
+        assertThat(resultAccessor.getHeader("error")).isNotNull();
+        assertThat((String) resultAccessor.getHeader("error")).contains("expired");
     }
 
     @Test
@@ -182,9 +183,9 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
-        assertThat(resultAccessor.getErrorMessage()).isNotNull();
+        assertThat(resultAccessor.getHeader("error")).isNotNull();
     }
 
     @Test
@@ -199,7 +200,7 @@ class WebSocketAuthInterceptorTest {
         Message<?> result = interceptor.preSend(message, channel);
 
         assertThat(result).isNotNull();
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor.getUser()).isNull();
     }
 
@@ -216,7 +217,7 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
         assertThat(resultAccessor.getUser()).isNotNull();
         assertThat(resultAccessor.getUser().getName()).isEqualTo("789");
@@ -238,10 +239,10 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
-        assertThat(resultAccessor.getErrorMessage()).isNotNull();
-        assertThat(resultAccessor.getErrorMessage()).contains("revoked");
+        assertThat(resultAccessor.getHeader("error")).isNotNull();
+        assertThat((String) resultAccessor.getHeader("error")).contains("revoked");
     }
 
     @Test
@@ -261,7 +262,7 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        SimpMessageHeaderAccessor resultAccessor = SimpMessageHeaderAccessor.wrap(result);
         assertThat(resultAccessor).isNotNull();
         // Connection should proceed (fail-open)
         assertThat(resultAccessor.getUser()).isNotNull();

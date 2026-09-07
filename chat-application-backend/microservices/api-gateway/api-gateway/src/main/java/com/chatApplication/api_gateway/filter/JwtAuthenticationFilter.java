@@ -266,7 +266,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * Parses JWT using RS256 with JWK Set verification.
      * Caches the JWK Set for 24 hours to prevent DoS.
      */
-    private Claims parseWithJwk(String token) throws ParseException, java.text.ParseException {
+    private Claims parseWithJwk(String token) throws ParseException, java.text.ParseException, java.io.IOException {
         JWKSet jwkSet = getJwkSet();
         SignedJWT signedJWT = SignedJWT.parse(token);
 
@@ -276,15 +276,19 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             for (com.nimbusds.jose.jwk.JWK jwk : jwkSet.getKeys()) {
                 if (jwk.getKeyID().equals(keyId)) {
                     if (jwk instanceof RSAKey rsaKey) {
-                        RSAPublicKey publicKey = rsaKey.toRSAPublicKey();
-                        RSASSAVerifier verifier = new RSASSAVerifier(publicKey);
+                        try {
+                            RSAPublicKey publicKey = rsaKey.toRSAPublicKey();
+                            RSASSAVerifier verifier = new RSASSAVerifier(publicKey);
 
-                        if (!signedJWT.verify(verifier)) {
-                            throw new SignatureException("Invalid RS256 signature");
+                            if (!signedJWT.verify(verifier)) {
+                                throw new SignatureException("Invalid RS256 signature");
+                            }
+
+                            JWTClaimsSet jwtClaims = signedJWT.getJWTClaimsSet();
+                            return convertToJjwtClaims(jwtClaims);
+                        } catch (com.nimbusds.jose.JOSEException e) {
+                            throw new java.text.ParseException("Failed to verify RS256 signature: " + e.getMessage(), 0);
                         }
-
-                        JWTClaimsSet jwtClaims = signedJWT.getJWTClaimsSet();
-                        return convertToJjwtClaims(jwtClaims);
                     }
                 }
             }
@@ -314,11 +318,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * Gets the cached JWK Set or fetches a new one.
      * Uses simple TTL-based caching (24 hours).
      */
-    private JWKSet getJwkSet() throws ParseException {
+    private JWKSet getJwkSet() throws ParseException, java.io.IOException {
         long now = System.currentTimeMillis();
         if (cachedJwkSet == null || (now - lastJwkFetchTime) > JWK_CACHE_TTL_MS) {
-            cachedJwkSet = JWKSet.parse(
-                    new java.net.URL(jwkSetUri));
+            String jwkJson = new String(new java.net.URL(jwkSetUri).openStream().readAllBytes());
+            cachedJwkSet = JWKSet.parse(jwkJson);
             lastJwkFetchTime = now;
             log.debug("JWK Set refreshed: {} keys loaded", cachedJwkSet.getKeys().size());
         }

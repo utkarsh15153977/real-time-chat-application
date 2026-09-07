@@ -15,6 +15,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -113,13 +115,16 @@ public class MediaServiceImpl implements MediaService {
                 request.getFileName());
 
         // 4. Build S3 PutObjectRequest with metadata
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("uploader-id", userId);
+        metadata.put("chat-room-id", request.getChatRoomId());
+        metadata.put("original-filename", request.getFileName());
+
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(fileKey)
                 .contentType(request.getContentType())
-                .metadata("uploader-id", userId)
-                .metadata("chat-room-id", request.getChatRoomId())
-                .metadata("original-filename", request.getFileName())
+                .metadata(metadata)
                 .build();
 
         // 5. Create presigned URL (time-limited PUT access)
@@ -142,7 +147,7 @@ public class MediaServiceImpl implements MediaService {
                 .uploadUrl(presignedRequest.url().toString())
                 .fileKey(fileKey)
                 .publicUrl(publicUrl)
-                .expiresAt(presignedRequest.expiration().toInstant())
+                .expiresAt(presignedRequest.expiration())
                 .build();
     }
 

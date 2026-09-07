@@ -4,6 +4,7 @@ import com.chatApplication.message_service.dto.ChatMessageRequestDTO;
 import com.chatApplication.message_service.dto.ChatMessageResponseDTO;
 import com.chatApplication.message_service.dto.TypingEvent;
 import com.chatApplication.message_service.exception.MessageValidationException;
+import com.chatApplication.message_service.service.InboxService;
 import com.chatApplication.message_service.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ import java.security.Principal;
  * Broadcast destinations:
  * - /topic/room.{chatRoomId}: All subscribers in the chat room
  * - /user/{userId}/queue/messages: Direct message to specific user
+ * - /user/{userId}/queue/inbox: Real-time inbox update (Phase 4)
  */
 @Slf4j
 @Controller
@@ -37,6 +39,7 @@ public class ChatWebSocketController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageService messageService;
+    private final InboxService inboxService;
 
     /**
      * Handles incoming chat messages via STOMP.
@@ -78,6 +81,9 @@ public class ChatWebSocketController {
                     requestDTO.getRecipientId(),
                     "/queue/messages",
                     responseDTO);
+
+            // 4. Send real-time inbox update to recipient (Phase 4)
+            inboxService.notifyInboxUpdate(responseDTO);
 
             log.info("Message broadcast: id={}, room={}",
                     responseDTO.getMessageId(),

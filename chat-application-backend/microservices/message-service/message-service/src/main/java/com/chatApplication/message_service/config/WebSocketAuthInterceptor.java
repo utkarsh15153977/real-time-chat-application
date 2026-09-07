@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -82,7 +83,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor =
-                MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+                StompHeaderAccessor.wrap(message);
 
         if (accessor == null) {
             return message;
@@ -93,7 +94,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             authenticateConnectFrame(accessor);
         }
 
-        return message;
+        // Return new message with modified headers (wrap creates a separate accessor)
+        return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
     }
 
     /**
@@ -210,6 +212,10 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
      */
     private void storeTokenExpiry(StompHeaderAccessor accessor, Instant tokenExp) {
         Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+        if (sessionAttributes == null) {
+            sessionAttributes = new java.util.HashMap<>();
+            accessor.setSessionAttributes(sessionAttributes);
+        }
         sessionAttributes.put("token_exp", tokenExp);
         sessionAttributes.put("user_id", accessor.getUser() != null
                 ? accessor.getUser().getName() : null);
@@ -301,6 +307,6 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
      * @param message  the error message
      */
     private void rejectConnection(StompHeaderAccessor accessor, String message) {
-        accessor.setErrorMessage(message);
+        accessor.setHeader("error", message);
     }
 }
