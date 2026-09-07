@@ -1,6 +1,8 @@
 package com.chatApplication.message_service.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -13,6 +15,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  * The simple in-memory broker handles local message routing.
  * Redis Pub/Sub (via {@code RedisPubSubConfig}) handles cross-instance delivery.
  * <p>
+ * Security:
+ *   - {@code WebSocketAuthInterceptor} validates JWT on CONNECT frames
+ *   - Authenticated Principal is available to all @MessageMapping methods
+ *   - /ws endpoint must be accessible from API Gateway for WebSocket upgrade
+ * <p>
  * Broker prefixes:
  * - /topic: broadcast topics (presence events, typing indicators)
  * - /queue: user-specific queues (direct messages, delivery receipts)
@@ -20,7 +27,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private final WebSocketAuthInterceptor webSocketAuthInterceptor;
 
     @Override
     public void configureMessageBroker(
@@ -49,9 +59,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             StompEndpointRegistry registry) {
 
         // SockJS fallback endpoint for WebSocket connections
-        // Allows connections from any origin (API Gateway handles auth)
+        // The JWT auth interceptor handles authentication on CONNECT frames
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
+    }
+
+    /**
+     * Registers the JWT authentication interceptor on the client inbound channel.
+     * This interceptor processes STOMP CONNECT frames before they reach the broker.
+     *
+     * @param registration the channel registration
+     */
+    @Override
+    public void configureClientInboundChannel(
+            ChannelRegistration registration) {
+        registration.interceptors(webSocketAuthInterceptor);
     }
 }

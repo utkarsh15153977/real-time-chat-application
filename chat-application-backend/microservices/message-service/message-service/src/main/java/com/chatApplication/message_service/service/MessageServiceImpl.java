@@ -185,17 +185,23 @@ package com.chatApplication.message_service.service;
 import com.chatApplication.message_service.dto.*;
 import com.chatApplication.message_service.entity.Message;
 import com.chatApplication.message_service.entity.MessageStatus;
+import com.chatApplication.message_service.entity.MessageType;
+import com.chatApplication.message_service.exception.MessageValidationException;
 import com.chatApplication.message_service.kafka.MessageEvent;
 import com.chatApplication.message_service.kafka.MessageProducer;
 import com.chatApplication.message_service.repository.MessageRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Core message service implementation.
@@ -304,6 +310,156 @@ public class MessageServiceImpl implements MessageService {
 
         return mapToResponse(savedMessage);
     }
+
+    // ----------------------------------------------------------------
+    // Media Messaging: saveMessage and getChatHistory
+    // ----------------------------------------------------------------
+
+    /** MIME type prefixes allowed for media messages */
+    private static final Set<String> ALLOWED_MEDIA_TYPES = Set.of(
+            "image/", "video/", "audio/"
+    );
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Validates that non-TEXT messages include required media fields,
+     * defaults messageType to TEXT if null, persists the entity, and
+     * returns the response DTO.
+     */
+    @Override
+    @Transactional
+    public ChatMessageResponseDTO saveMessage(ChatMessageRequestDTO requestDTO) {
+        // Default messageType to TEXT if null
+        MessageType messageType = requestDTO.getMessageType() != null
+                ? requestDTO.getMessageType()
+                : MessageType.TEXT;
+
+        // Validate media fields for non-TEXT messages
+        validateMediaFields(requestDTO, messageType);
+
+        // Build and persist the entity
+        Message message = Message.builder()
+                .senderId(requestDTO.getSenderId())
+                .receiverId(requestDTO.getRecipientId())
+                .content(requestDTO.getContent())
+                .messageType(messageType)
+                .mediaUrl(requestDTO.getMediaUrl())
+                .fileKey(requestDTO.getFileKey())
+                .fileSizeBytes(requestDTO.getFileSizeBytes())
+                .status(MessageStatus.SENT)
+                .build();
+
+        Message saved = messageRepository.save(message);
+
+        log.info("Message saved: id={}, type={}, sender={}, receiver={}",
+                saved.getMsgId(), messageType,
+                saved.getSenderId(), saved.getReceiverId());
+
+        return mapToResponseDTO(saved);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Returns messages in reverse chronological order (newest first)
+     * for efficient pagination.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ChatMessageResponseDTO> getChatHistory(
+            String chatRoomId, Pageable pageable) {
+
+        // Chat room ID format: "{userId1}-{userId2}" for 1:1 chats
+        // Parse the two user IDs from the chat room ID
+        String[] userIds = parseChatRoomId(chatRoomId);
+
+        return messageRepository
+                .findConversationPaged(userIds[0], userIds[1], pageable)
+                .map(this::mapToResponseDTO);
+    }
+
+    /**
+     * Validates that non-TEXT messages have required media fields.
+     *
+     * @param requestDTO the incoming request
+     * @param messageType the resolved message type
+     * @throws MessageValidationException if required fields are missing
+     */
+    private void validateMediaFields(
+            ChatMessageRequestDTO requestDTO,
+            MessageType messageType) {
+
+        if (messageType != MessageType.TEXT) {
+            if (requestDTO.getMediaUrl() == null
+                    || requestDTO.getMediaUrl().isBlank()) {
+                throw new MessageValidationException(
+                        "mediaUrl is required for " + messageType + " messages");
+            }
+            if (requestDTO.getFileKey() == null
+                    || requestDTO.getFileKey().isBlank()) {
+                throw new MessageValidationException(
+                        "fileKey is required for " + messageType + " messages");
+            }
+        }
+
+        // TEXT messages should have content
+        if (messageType == MessageType.TEXT
+                && (requestDTO.getContent() == null
+                || requestDTO.getContent().isBlank())) {
+            throw new MessageValidationException(
+                    "content is required for TEXT messages");
+        }
+    }
+
+    /**
+     * Parses a chat room ID into its constituent user IDs.
+     * Expects format: "{userId1}-{userId2}"
+     *
+     * @param chatRoomId the chat room identifier
+     * @return array of two user ID strings
+     * @throws MessageValidationException if the format is invalid
+     */
+    private String[] parseChatRoomId(String chatRoomId) {
+        if (chatRoomId == null || chatRoomId.isBlank()) {
+            throw new MessageValidationException("chatRoomId is required");
+        }
+        String[] parts = chatRoomId.split("-");
+        if (parts.length != 2) {
+            throw new MessageValidationException(
+                    "Invalid chatRoomId format. Expected: {userId1}-{userId2}");
+        }
+        return parts;
+    }
+
+    /**
+     * Maps a Message entity to a ChatMessageResponseDTO.
+     *
+     * @param message the persisted entity
+     * @return the response DTO
+     */
+    private ChatMessageResponseDTO mapToResponseDTO(Message message) {
+        return ChatMessageResponseDTO.builder()
+                .messageId(String.valueOf(message.getMsgId()))
+                .senderId(message.getSenderId())
+                .recipientId(message.getReceiverId())
+                .chatRoomId(message.getSenderId() + "-" + message.getReceiverId())
+                .content(message.getContent())
+                .messageType(message.getMessageType())
+                .mediaUrl(message.getMediaUrl())
+                .fileKey(message.getFileKey())
+                .fileSizeBytes(message.getFileSizeBytes())
+                .status(message.getStatus() != null
+                        ? message.getStatus().name() : null)
+                .timestamp(message.getTimestamp() != null
+                        ? message.getTimestamp().toInstant(java.time.ZoneOffset.UTC)
+                        : Instant.now())
+                .build();
+    }
+
+    // ----------------------------------------------------------------
+    // Existing methods (preserved)
+    // ----------------------------------------------------------------
 
     @Override
     public List<MessageResponse> getConversation(

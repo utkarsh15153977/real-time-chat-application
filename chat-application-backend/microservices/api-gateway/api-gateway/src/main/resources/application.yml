@@ -4,6 +4,13 @@ spring:
   cloud:
     gateway:
       routes:
+        # WebSocket STOMP route (upgraded connection goes to message-service)
+        - id: message-service-ws
+          uri: ws://localhost:8082
+          predicates:
+            - Path=/ws/**
+
+        # REST API routes
         - id: auth-service
           uri: http://localhost:8081
           predicates:
@@ -22,13 +29,15 @@ spring:
           uri: http://localhost:8083
           predicates:
             - Path=/api/chats/**
+            - Path=/api/presence/**
           filters:
             - StripPrefix=0
 
         - id: message-service
-          uri: http://localhost:8084
+          uri: http://localhost:8082
           predicates:
             - Path=/api/messages/**
+            - Path=/api/v1/media/**
           filters:
             - StripPrefix=0
 
@@ -55,6 +64,8 @@ spring:
             allowedOriginPatterns:
               - "http://localhost:5173"
               - "http://localhost:3000"
+              - "http://127.0.0.1:5173"
+              - "http://127.0.0.1:3000"
             allowedMethods:
               - GET
               - POST
@@ -62,6 +73,7 @@ spring:
               - DELETE
               - OPTIONS
               - HEAD
+              - PATCH
             allowedHeaders:
               - Authorization
               - Content-Type
@@ -71,6 +83,11 @@ spring:
             allowCredentials: true
             exposedHeaders:
               - Authorization
+            maxAge: 3600
+
+# JWT Configuration (must match auth-service jwt.secret)
+jwt:
+  secret: ${JWT_SECRET:blinkChatSuperSecretKeyForJwtTokenSigning2024MustBeLongEnough!!}
 
 server:
   port: 8080
@@ -91,3 +108,4 @@ management:
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+    com.chatApplication.api_gateway: DEBUG

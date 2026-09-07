@@ -1,16 +1,24 @@
 package com.chatApplication.message_service.service;
 
-import com.chatApplication.message_service.dto.AttachmentRequest;
-import com.chatApplication.message_service.dto.MessageRequest;
-import com.chatApplication.message_service.dto.MessageResponse;
+import com.chatApplication.message_service.dto.*;
+import com.chatApplication.message_service.entity.MessageType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface MessageService {
+
+    // Legacy message sending (REST API)
     MessageResponse sendMessage(MessageRequest request);
-    List<MessageResponse> getConversation(
-            String user1,
-            String user2);
+
+    /** Persist a chat message from a ChatMessageRequestDTO (WebSocket or REST) */
+    ChatMessageResponseDTO saveMessage(ChatMessageRequestDTO requestDTO);
+
+    /** Retrieve paginated chat history for a room */
+    Page<ChatMessageResponseDTO> getChatHistory(String chatRoomId, Pageable pageable);
+
+    List<MessageResponse> getConversation(String user1, String user2);
 
     MessageResponse getMessage(Long messageId);
 
@@ -18,33 +26,17 @@ public interface MessageService {
 
     MessageResponse markAsSeen(Long messageId);
 
-    // Mark All Messages as Seen
-    void markAllAsSeen(
-            String senderId,
-            String receiverId);
+    void markAllAsSeen(String senderId, String receiverId);
 
-    // Delete Message
     void deleteMessage(Long messageId);
 
-    // Edit Message
-    MessageResponse editMessage(
-            Long messageId,
-            String content);
+    MessageResponse editMessage(Long messageId, String content);
 
+    Long getUnreadCount(String senderId, String receiverId);
 
-    // Unread Count
-    Long getUnreadCount(
-            String senderId,
-            String receiverId);
+    List<MessageResponse> getRecentMessages(String userId);
 
-    // Recent Chats
-    List<MessageResponse> getRecentMessages(
-            String userId);
-
-    // Message Existence
     boolean exists(Long messageId);
 
-    // File/Image Messages
-    MessageResponse sendAttachment(
-            AttachmentRequest request);
+    MessageResponse sendAttachment(AttachmentRequest request);
 }

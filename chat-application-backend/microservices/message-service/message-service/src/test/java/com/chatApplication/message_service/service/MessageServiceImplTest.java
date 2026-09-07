@@ -1,11 +1,10 @@
 package com.chatApplication.message_service.service;
 
-import com.chatApplication.message_service.dto.ChatMessage;
-import com.chatApplication.message_service.dto.MessageRequest;
-import com.chatApplication.message_service.dto.MessageResponse;
-import com.chatApplication.message_service.dto.ReadReceiptEvent;
+import com.chatApplication.message_service.dto.*;
 import com.chatApplication.message_service.entity.Message;
 import com.chatApplication.message_service.entity.MessageStatus;
+import com.chatApplication.message_service.entity.MessageType;
+import com.chatApplication.message_service.exception.MessageValidationException;
 import com.chatApplication.message_service.kafka.MessageProducer;
 import com.chatApplication.message_service.repository.MessageRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +15,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.LocalDateTime;
@@ -39,6 +42,9 @@ class MessageServiceImplTest {
     @Mock
     private MessageProducer messageProducer;
 
+    @Mock
+    private RedisMessagePublisher redisMessagePublisher;
+
     @InjectMocks
     private MessageServiceImpl messageService;
 
@@ -52,10 +58,219 @@ class MessageServiceImplTest {
                 .receiverId("user2")
                 .content("Hello World")
                 .status(MessageStatus.SENT)
+                .messageType(MessageType.TEXT)
                 .timestamp(LocalDateTime.of(2025, 1, 15, 10, 30))
                 .isAttachment(false)
                 .build();
     }
+
+    // ================================================================
+    // saveMessage tests (NEW - Media Messaging)
+    // ================================================================
+
+    @Nested
+    @DisplayName("saveMessage")
+    class SaveMessageTests {
+
+        @Test
+        @DisplayName("should persist a TEXT message with default type")
+        void saveMessage_textMessage_savesAndReturns() {
+            ChatMessageRequestDTO request = ChatMessageRequestDTO.builder()
+                    .senderId("user1")
+                    .recipientId("user2")
+                    .chatRoomId("user1-user2")
+                    .content("Hello World")
+                    .messageType(MessageType.TEXT)
+                    .build();
+
+            when(messageRepository.save(any(Message.class))).thenReturn(message);
+
+            ChatMessageResponseDTO response = messageService.saveMessage(request);
+
+            assertThat(response).isNotNull();
+            assertThat(response.getMessageId()).isEqualTo("1");
+            assertThat(response.getSenderId()).isEqualTo("user1");
+            assertThat(response.getRecipientId()).isEqualTo("user2");
+            assertThat(response.getContent()).isEqualTo("Hello World");
+            assertThat(response.getMessageType()).isEqualTo(MessageType.TEXT);
+
+            verify(messageRepository).save(any(Message.class));
+        }
+
+        @Test
+        @DisplayName("should default messageType to TEXT when null")
+        void saveMessage_nullType_defaultsToText() {
+            ChatMessageRequestDTO request = ChatMessageRequestDTO.builder()
+                    .senderId("user1")
+                    .recipientId("user2")
+                    .content("Hello")
+                    .messageType(null)
+                    .build();
+
+            when(messageRepository.save(any(Message.class))).thenReturn(message);
+
+            ChatMessageResponseDTO response = messageService.saveMessage(request);
+
+            assertThat(response.getMessageType()).isEqualTo(MessageType.TEXT);
+        }
+
+        @Test
+        @DisplayName("should persist an IMAGE message with media fields")
+        void saveMessage_imageMessage_savesMediaFields() {
+            Message imageMessage = Message.builder()
+                    .msgId(2L)
+                    .senderId("user1")
+                    .receiverId("user2")
+                    .content(null)
+                    .messageType(MessageType.IMAGE)
+                    .mediaUrl("https://s3.amazonaws.com/bucket/chats/room1/photo.jpg")
+                    .fileKey("chats/room1/uuid-photo.jpg")
+                    .fileSizeBytes(2048000L)
+                    .status(MessageStatus.SENT)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            ChatMessageRequestDTO request = ChatMessageRequestDTO.builder()
+                    .senderId("user1")
+                    .recipientId("user2")
+                    .chatRoomId("user1-user2")
+                    .messageType(MessageType.IMAGE)
+                    .mediaUrl("https://s3.amazonaws.com/bucket/chats/room1/photo.jpg")
+                    .fileKey("chats/room1/uuid-photo.jpg")
+                    .fileSizeBytes(2048000L)
+                    .build();
+
+            when(messageRepository.save(any(Message.class))).thenReturn(imageMessage);
+
+            ChatMessageResponseDTO response = messageService.saveMessage(request);
+
+            assertThat(response.getMessageType()).isEqualTo(MessageType.IMAGE);
+            assertThat(response.getMediaUrl()).contains("photo.jpg");
+            assertThat(response.getFileKey()).contains("uuid-photo.jpg");
+            assertThat(response.getFileSizeBytes()).isEqualTo(2048000L);
+
+            verify(messageRepository).save(any(Message.class));
+        }
+
+        @Test
+        @DisplayName("should persist a FILE message with all media fields")
+        void saveMessage_fileMessage_savesAllFields() {
+            Message fileMessage = Message.builder()
+                    .msgId(3L)
+                    .senderId("user1")
+                    .receiverId("user2")
+                    .messageType(MessageType.FILE)
+                    .mediaUrl("https://s3.amazonaws.com/bucket/chats/room1/doc.pdf")
+                    .fileKey("chats/room1/uuid-doc.pdf")
+                    .fileSizeBytes(1048576L)
+                    .status(MessageStatus.SENT)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            ChatMessageRequestDTO request = ChatMessageRequestDTO.builder()
+                    .senderId("user1")
+                    .recipientId("user2")
+                    .chatRoomId("user1-user2")
+                    .messageType(MessageType.FILE)
+                    .mediaUrl("https://s3.amazonaws.com/bucket/chats/room1/doc.pdf")
+                    .fileKey("chats/room1/uuid-doc.pdf")
+                    .fileSizeBytes(1048576L)
+                    .build();
+
+            when(messageRepository.save(any(Message.class))).thenReturn(fileMessage);
+
+            ChatMessageResponseDTO response = messageService.saveMessage(request);
+
+            assertThat(response.getMessageType()).isEqualTo(MessageType.FILE);
+            assertThat(response.getFileSizeBytes()).isEqualTo(1048576L);
+        }
+
+        @Test
+        @DisplayName("should throw when IMAGE message has no mediaUrl")
+        void saveMessage_imageNoMediaUrl_throwsException() {
+            ChatMessageRequestDTO request = ChatMessageRequestDTO.builder()
+                    .senderId("user1")
+                    .recipientId("user2")
+                    .messageType(MessageType.IMAGE)
+                    .fileKey("chats/room1/uuid-photo.jpg")
+                    .build();
+
+            assertThatThrownBy(() -> messageService.saveMessage(request))
+                    .isInstanceOf(MessageValidationException.class)
+                    .hasMessageContaining("mediaUrl is required");
+        }
+
+        @Test
+        @DisplayName("should throw when VIDEO message has no fileKey")
+        void saveMessage_videoNoFileKey_throwsException() {
+            ChatMessageRequestDTO request = ChatMessageRequestDTO.builder()
+                    .senderId("user1")
+                    .recipientId("user2")
+                    .messageType(MessageType.VIDEO)
+                    .mediaUrl("https://s3.amazonaws.com/bucket/video.mp4")
+                    .build();
+
+            assertThatThrownBy(() -> messageService.saveMessage(request))
+                    .isInstanceOf(MessageValidationException.class)
+                    .hasMessageContaining("fileKey is required");
+        }
+
+        @Test
+        @DisplayName("should throw when TEXT message has no content")
+        void saveMessage_textNoContent_throwsException() {
+            ChatMessageRequestDTO request = ChatMessageRequestDTO.builder()
+                    .senderId("user1")
+                    .recipientId("user2")
+                    .messageType(MessageType.TEXT)
+                    .build();
+
+            assertThatThrownBy(() -> messageService.saveMessage(request))
+                    .isInstanceOf(MessageValidationException.class)
+                    .hasMessageContaining("content is required");
+        }
+    }
+
+    // ================================================================
+    // getChatHistory tests (NEW - Media Messaging)
+    // ================================================================
+
+    @Nested
+    @DisplayName("getChatHistory")
+    class GetChatHistoryTests {
+
+        @Test
+        @DisplayName("should return paginated messages for a chat room")
+        void getChatHistory_validRoom_returnsPage() {
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Message> page = new PageImpl<>(List.of(message), pageable, 1);
+
+            when(messageRepository.findConversationPaged(
+                    eq("user1"), eq("user2"), eq(pageable)))
+                    .thenReturn(page);
+
+            Page<ChatMessageResponseDTO> result =
+                    messageService.getChatHistory("user1-user2", pageable);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getSenderId()).isEqualTo("user1");
+        }
+
+        @Test
+        @DisplayName("should throw when chatRoomId is invalid")
+        void getChatHistory_invalidRoom_throwsException() {
+            Pageable pageable = PageRequest.of(0, 20);
+
+            assertThatThrownBy(() ->
+                    messageService.getChatHistory("invalid", pageable))
+                    .isInstanceOf(MessageValidationException.class)
+                    .hasMessageContaining("Invalid chatRoomId format");
+        }
+    }
+
+    // ================================================================
+    // Existing tests (preserved)
+    // ================================================================
 
     @Nested
     @DisplayName("sendMessage")
@@ -164,8 +379,8 @@ class MessageServiceImplTest {
     class MarkAsSeenTests {
 
         @Test
-        @DisplayName("should mark message as SEEN")
-        void markAsSeen_validMessage_returnsSeen() {
+        @DisplayName("should mark message as READ")
+        void markAsSeen_validMessage_returnsRead() {
             when(messageRepository.findById(1L)).thenReturn(Optional.of(message));
             when(messageRepository.save(any(Message.class))).thenReturn(message);
 
@@ -193,7 +408,7 @@ class MessageServiceImplTest {
     class MarkAllAsSeenTests {
 
         @Test
-        @DisplayName("should mark all unread messages as seen")
+        @DisplayName("should mark all unread messages as read")
         void markAllAsSeen_validRequest_marksAll() {
             Message unreadMsg = Message.builder()
                     .msgId(2L)
