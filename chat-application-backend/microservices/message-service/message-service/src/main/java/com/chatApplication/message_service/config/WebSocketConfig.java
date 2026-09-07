@@ -16,8 +16,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  * Redis Pub/Sub (via {@code RedisPubSubConfig}) handles cross-instance delivery.
  * <p>
  * Security:
- *   - {@code WebSocketAuthInterceptor} validates JWT on CONNECT frames
- *   - Authenticated Principal is available to all @MessageMapping methods
+ *   - WebSocketAuthInterceptor: Validates JWT on CONNECT frames
+ *   - InternalSecurityFilter: Validates X-Internal-Secret on HTTP upgrade
+ *   - WebSocketSessionExpiryManager: Tracks and expires stale sessions
  *   - /ws endpoint must be accessible from API Gateway for WebSocket upgrade
  * <p>
  * Broker prefixes:
@@ -66,8 +67,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     /**
-     * Registers the JWT authentication interceptor on the client inbound channel.
-     * This interceptor processes STOMP CONNECT frames before they reach the broker.
+     * Registers security interceptors on the client inbound channel.
+     * <p>
+     * Interceptors execute in order:
+     *   1. InternalSecurityFilter (validates X-Internal-Secret on HTTP upgrade)
+     *   2. WebSocketAuthInterceptor (validates JWT on STOMP CONNECT)
      *
      * @param registration the channel registration
      */

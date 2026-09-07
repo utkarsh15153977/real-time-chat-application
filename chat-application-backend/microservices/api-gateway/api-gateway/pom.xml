@@ -69,6 +69,19 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Reactive Redis (token blacklist revocation) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+        </dependency>
+
+        <!-- Nimbus JOSE+JWT for JWK Set verification (RS256/asymmetric JWT) -->
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwk</artifactId>
+            <version>9.37.3</version>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

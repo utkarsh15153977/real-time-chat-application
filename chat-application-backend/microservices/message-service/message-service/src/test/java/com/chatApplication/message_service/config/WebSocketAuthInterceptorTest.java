@@ -7,21 +7,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for the WebSocket STOMP authentication interceptor.
@@ -33,19 +35,26 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - CONNECT with expired token -> connection is rejected
  * - CONNECT with tampered token -> connection is rejected
  * - Non-CONNECT frames -> pass through without authentication
+ * - CONNECT with blacklisted token -> connection is rejected
+ * - Token expiry is stored in session attributes
  */
 @ExtendWith(MockitoExtension.class)
 class WebSocketAuthInterceptorTest {
 
     private WebSocketAuthInterceptor interceptor;
+    private StringRedisTemplate redisTemplate;
+    private WebSocketSessionExpiryManager expiryManager;
     private MessageChannel channel;
     private static final String SECRET = "testSecretKeyForJwtTokenSigningMustBeLongEnoughForHs256!!";
 
     @BeforeEach
     void setUp() {
-        interceptor = new WebSocketAuthInterceptor();
+        redisTemplate = mock(StringRedisTemplate.class);
+        expiryManager = mock(WebSocketSessionExpiryManager.class);
+        interceptor = new WebSocketAuthInterceptor(redisTemplate, expiryManager);
         ReflectionTestUtils.setField(interceptor, "jwtSecret", SECRET);
         channel = mock(MessageChannel.class);
+        when(redisTemplate.hasKey(anyString())).thenReturn(false);
     }
 
     private String generateValidToken(String userId, String email) {
@@ -55,6 +64,7 @@ class WebSocketAuthInterceptorTest {
                 .subject(email)
                 .claim("userId", userId)
                 .claim("name", "Test User")
+                .id("jti-" + userId)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + 3600000))
                 .signWith(key)
@@ -93,6 +103,13 @@ class WebSocketAuthInterceptorTest {
         assertThat(resultAccessor.getUser()).isNotNull();
         assertThat(resultAccessor.getUser().getName()).isEqualTo("123");
         assertThat(resultAccessor.getUser()).isInstanceOf(UsernamePasswordAuthenticationToken.class);
+
+        // Verify token expiry is stored in session attributes
+        assertThat(resultAccessor.getSessionAttributes()).containsKey("token_exp");
+        assertThat(resultAccessor.getSessionAttributes()).containsKey("user_id");
+
+        // Verify session is registered with expiry manager
+        verify(expiryManager).registerSession(eq("session-1"), any(Instant.class));
     }
 
     @Test
@@ -111,6 +128,9 @@ class WebSocketAuthInterceptorTest {
         assertThat(resultAccessor).isNotNull();
         assertThat(resultAccessor.getUser()).isNotNull();
         assertThat(resultAccessor.getUser().getName()).isEqualTo("456");
+
+        // Verify session is registered with expiry manager
+        verify(expiryManager).registerSession(eq("session-2"), any(Instant.class));
     }
 
     @Test
@@ -178,10 +198,9 @@ class WebSocketAuthInterceptorTest {
 
         Message<?> result = interceptor.preSend(message, channel);
 
-        // Result should be the same message, unchanged
         assertThat(result).isNotNull();
         StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
-        assertThat(resultAccessor.getUser()).isNull(); // No auth attempt on SEND
+        assertThat(resultAccessor.getUser()).isNull();
     }
 
     @Test
@@ -201,5 +220,63 @@ class WebSocketAuthInterceptorTest {
         assertThat(resultAccessor).isNotNull();
         assertThat(resultAccessor.getUser()).isNotNull();
         assertThat(resultAccessor.getUser().getName()).isEqualTo("789");
+    }
+
+    @Test
+    @DisplayName("CONNECT with blacklisted token rejects connection")
+    void preSend_blacklistedToken_rejectsConnection() {
+        String token = generateValidToken("123", "user@example.com");
+
+        // Mock Redis to return true for blacklist check
+        when(redisTemplate.hasKey("blacklist:jti-123")).thenReturn(true);
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setSessionId("session-8");
+        accessor.addNativeHeader("Authorization", "Bearer " + token);
+
+        Message<?> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        Message<?> result = interceptor.preSend(message, channel);
+
+        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        assertThat(resultAccessor).isNotNull();
+        assertThat(resultAccessor.getErrorMessage()).isNotNull();
+        assertThat(resultAccessor.getErrorMessage()).contains("revoked");
+    }
+
+    @Test
+    @DisplayName("Redis failure allows connection (fail-open)")
+    void preSend_redisFailure_allowsConnection() {
+        String token = generateValidToken("123", "user@example.com");
+
+        // Mock Redis to throw exception
+        when(redisTemplate.hasKey(anyString()))
+                .thenThrow(new RuntimeException("Redis unavailable"));
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setSessionId("session-9");
+        accessor.addNativeHeader("Authorization", "Bearer " + token);
+
+        Message<?> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        Message<?> result = interceptor.preSend(message, channel);
+
+        StompHeaderAccessor resultAccessor = StompHeaderAccessor.getAccessor(result);
+        assertThat(resultAccessor).isNotNull();
+        // Connection should proceed (fail-open)
+        assertThat(resultAccessor.getUser()).isNotNull();
+        assertThat(resultAccessor.getUser().getName()).isEqualTo("123");
+    }
+
+    @Test
+    @DisplayName("SecurityLogUtils masks tokens correctly")
+    void securityLogUtils_masksTokenCorrectly() {
+        String longToken = "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxMjMifQ.signature";
+        String masked = SecurityLogUtils.maskToken(longToken);
+        assertThat(masked).startsWith("eyJhbGciOi");
+        assertThat(masked).contains("[...MASKED]");
+
+        assertThat(SecurityLogUtils.maskToken("short")).isEqualTo("[MASKED]");
+        assertThat(SecurityLogUtils.maskToken(null)).isEqualTo("[NULL]");
     }
 }

@@ -1,5 +1,7 @@
 package com.chatApplication.message_service.service;
 
+import com.chatApplication.message_service.config.SecurityLogUtils;
+import com.chatApplication.message_service.config.WebSocketSessionExpiryManager;
 import com.chatApplication.message_service.entity.UserPresence;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,14 +13,23 @@ import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import com.chatApplication.message_service.repository.UserPresenceRepository;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Listens for WebSocket STOMP session lifecycle events.
  * <p>
- * Security: userId is extracted from the authenticated Principal
- * (set by WebSocketAuthInterceptor during CONNECT), NOT from
- * client-provided native headers. This prevents presence spoofing.
+ * Security responsibilities:
+ *   1. Extract userId from authenticated Principal (not client headers)
+ *   2. Register sessions with WebSocketSessionExpiryManager for expiration
+ *   3. Clean up presence state on disconnect
+ *   4. Track session activity for heartbeat monitoring
+ * <p>
+ * Session expiration:
+ *   - Token expiry is stored in session attributes during CONNECT
+ *   - WebSocketSessionExpiryManager periodically checks and closes expired sessions
+ *   - This prevents stale sessions from remaining active after token expiry
  */
 @Slf4j
 @Component
@@ -27,6 +38,7 @@ public class WebSocketEventListener {
 
     private final PresenceTracker presenceTracker;
     private final UserPresenceRepository userPresenceRepository;
+    private final WebSocketSessionExpiryManager expiryManager;
 
     @EventListener
     public void handleConnect(SessionConnectEvent event) {
@@ -38,6 +50,14 @@ public class WebSocketEventListener {
 
         if (userId != null) {
             presenceTracker.userOnline(userId);
+
+            // Register session for expiration tracking
+            Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+            Instant tokenExp = (Instant) sessionAttributes.get("token_exp");
+            if (tokenExp != null) {
+                expiryManager.registerSession(accessor.getSessionId(), tokenExp);
+            }
+
             log.debug("User {} marked online via WebSocket connect", userId);
         }
     }
@@ -55,6 +75,9 @@ public class WebSocketEventListener {
         }
 
         presenceTracker.userOffline(userId);
+
+        // Remove session from expiry tracking
+        expiryManager.removeSession(accessor.getSessionId());
 
         UserPresence presence = userPresenceRepository
                 .findById(userId)

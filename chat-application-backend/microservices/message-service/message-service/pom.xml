@@ -113,6 +113,13 @@
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 
+		<!-- Nimbus JOSE+JWT for JWK Set verification (RS256/asymmetric JWT) -->
+		<dependency>
+			<groupId>com.nimbusds</groupId>
+			<artifactId>nimbus-jose-jwk</artifactId>
+			<version>9.37.3</version>
+		</dependency>
+
 		<!-- Kafka -->
 		<dependency>
 			<groupId>org.springframework.kafka</groupId>
