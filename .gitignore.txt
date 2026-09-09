@@ -16,3 +16,20 @@ build/
 # IDE
 .vscode/
 .idea/
+
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Maven
+**/target/
+
+# Application logs
+**/logs/
+*.log
+*.log.gz
+
+# Runtime logs
+eureka.log
+eureka-err.log

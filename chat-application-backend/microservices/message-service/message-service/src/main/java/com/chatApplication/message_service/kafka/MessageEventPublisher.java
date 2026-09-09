@@ -1,7 +1,7 @@
 package com.chatApplication.message_service.kafka;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
@@ -22,10 +22,14 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MessageEventPublisher {
 
     private final KafkaTemplate<String, MessageCreatedEvent> messageCreatedKafkaTemplate;
+
+    public MessageEventPublisher(
+            @Qualifier("messageCreatedKafkaTemplate") KafkaTemplate<String, MessageCreatedEvent> messageCreatedKafkaTemplate) {
+        this.messageCreatedKafkaTemplate = messageCreatedKafkaTemplate;
+    }
 
     private static final String TOPIC = "chat.message-created";
 

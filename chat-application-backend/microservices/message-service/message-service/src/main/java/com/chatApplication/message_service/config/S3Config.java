@@ -2,6 +2,7 @@ package com.chatApplication.message_service.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -55,6 +56,7 @@ public class S3Config {
      * @return configured S3Presigner instance
      */
     @Bean
+    @ConditionalOnExpression("'${aws.s3.access-key:}' != ''")
     public S3Presigner s3Presigner() {
         S3Presigner.Builder builder = S3Presigner.builder()
                 .region(Region.of(region))
@@ -84,6 +86,7 @@ public class S3Config {
      * @return configured S3Client instance
      */
     @Bean
+    @ConditionalOnExpression("'${aws.s3.access-key:}' != ''")
     public S3Client s3Client() {
         S3ClientBuilder builder = S3Client.builder()
                 .region(Region.of(region))

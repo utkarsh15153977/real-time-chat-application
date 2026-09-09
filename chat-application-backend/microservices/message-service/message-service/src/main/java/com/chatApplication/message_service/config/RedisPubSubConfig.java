@@ -1,6 +1,7 @@
 package com.chatApplication.message_service.config;
 
 import com.chatApplication.message_service.service.RedisMessageSubscriber;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -23,6 +24,12 @@ import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
  *     -> All connected clients receive the message
  */
 @Configuration
+
+@ConditionalOnProperty(
+        name = "app.redis.pubsub.enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class RedisPubSubConfig {
 
     /** Redis channel name used for cross-instance message synchronization */

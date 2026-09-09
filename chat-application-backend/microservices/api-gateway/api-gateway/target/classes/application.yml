@@ -1,99 +1,50 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: api-gateway
 
-  # Redis configuration for token blacklist revocation
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 5000ms
-      lettuce:
-        pool:
-          max-active: 20
-          max-idle: 10
-          min-idle: 5
-          max-wait: 3000ms
 
   cloud:
     gateway:
       routes:
-        # WebSocket STOMP route (upgraded connection goes to message-service)
+        # WebSocket Route
         - id: message-service-ws
           uri: lb:ws://message-service
           predicates:
             - Path=/ws/**
 
-        # REST API routes
+        # REST Service Routes
         - id: auth-service
-          uri: lb://auth-service
+          uri: lb:ws://auth-service
           predicates:
             - Path=/api/auth/**
           filters:
             - StripPrefix=0
 
-        - id: user-service
-          uri: lb://user-service
-          predicates:
-            - Path=/api/users/**
-          filters:
-            - StripPrefix=0
-
-        - id: chat-service
-          uri: lb://chat-service
-          predicates:
-            - Path=/api/chats/**
-            - Path=/api/presence/**
-          filters:
-            - StripPrefix=0
-
-        - id: message-service
-          uri: lb://message-service
-          predicates:
-            - Path=/api/messages/**
-            - Path=/api/v1/media/**
-          filters:
-            - StripPrefix=0
-
-        - id: notification-service
-          uri: lb://notification-service
-          predicates:
-            - Path=/api/notifications/**
-          filters:
-            - StripPrefix=0
-
-        - id: group-chat
-          uri: lb://group-chat
-          predicates:
-            - Path=/api/groups/**
-          filters:
-            - StripPrefix=0
-
-      # WebFlux Netty memory optimization for WebSocket connections
-      httpclient:
-        webclient:
-          max-in-memory-size: 10MB
-        connect-timeout: 5000
-        response-timeout: 30s
-        pool:
-          max-connections: 500
-          max-idle-time: 20s
-          max-life-time: 60s
-          acquire-timeout: 10000
-          type: elastic
+#        - id: message-service
+#          uri: lb://message-service
+#          predicates:
+#            - Path=/api/messages/**
+#            - Path=/api/v1/media/**
+#          filters:
+#            - StripPrefix=0
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
 
       globalcors:
+        add-to-simple-url-handler-mapping: true
         cors-configurations:
           '[/**]':
             allowedOriginPatterns:
-              - "http://localhost:5173"
-              - "http://localhost:3000"
-              - "http://127.0.0.1:5173"
-              - "http://127.0.0.1:3000"
-              - "https://*.yourdomain.com"
+              - "*"
             allowedMethods:
               - GET
               - POST
@@ -102,44 +53,19 @@ spring:
               - OPTIONS
               - HEAD
               - PATCH
-            allowedHeaders:
-              - Authorization
-              - Content-Type
-              - Accept
-              - Origin
-              - X-Requested-With
+            allowedHeaders: "*"
             allowCredentials: true
             exposedHeaders:
               - Authorization
+              - X-User-Id
             maxAge: 3600
 
-# JWT Configuration (must match auth-service jwt.secret)
-jwt:
-  secret: ${JWT_SECRET:blinkChatSuperSecretKeyForJwtTokenSigning2024MustBeLongEnough!!}
-  # JWK Set URI for RS256 asymmetric verification (leave empty for HS256 fallback)
-  jwk-set-uri: ${JWK_SET_URI:}
-
-# Internal service-to-service authentication
-security:
-  internal-secret: ${INTERNAL_SERVICE_SECRET:blinkInternalSecret2024}
-
-server:
-  port: 8080
-
+# Eureka Client Setup (Connects Gateway to all registered services)
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
-    register-with-eureka: true
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
     fetch-registry: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,gateway
-
-logging:
-  level:
-    org.springframework.cloud.gateway: INFO
-    com.chatApplication.api_gateway: DEBUG
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true

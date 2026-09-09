@@ -12,97 +12,157 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
+    // ================================================================
+    // Basic Message Queries
+    // ================================================================
+
+    /**
+     * Finds messages sent from one user to another.
+     */
     List<Message> findBySenderIdAndReceiverId(
             String senderId,
-            String receiverId);
+            String receiverId
+    );
 
+    /**
+     * Finds the complete conversation between two users.
+     * Results are returned from oldest to newest.
+     */
     @Query("""
             SELECT m
             FROM Message m
-            WHERE
-            (m.senderId = :user1 AND m.receiverId = :user2)
-            OR
-            (m.senderId = :user2 AND m.receiverId = :user1)
+            WHERE (m.senderId = :user1 AND m.receiverId = :user2)
+               OR (m.senderId = :user2 AND m.receiverId = :user1)
             ORDER BY m.timestamp ASC
             """)
     List<Message> findConversation(
             @Param("user1") String user1,
-            @Param("user2") String user2);
+            @Param("user2") String user2
+    );
 
+    // ================================================================
+    // Unread Message Queries
+    // ================================================================
+
+    /**
+     * Finds unread messages sent from senderId to receiverId.
+     *
+     * A message is considered unread when its status is either:
+     * SENT or DELIVERED.
+     *
+     * READ and FAILED messages are not considered unread.
+     */
     @Query("""
             SELECT m
             FROM Message m
             WHERE m.senderId = :senderId
-            AND m.receiverId = :receiverId
-            AND m.status <> 'SEEN'
+              AND m.receiverId = :receiverId
+              AND m.status IN (
+                  com.chatApplication.message_service.entity.MessageStatus.SENT,
+                  com.chatApplication.message_service.entity.MessageStatus.DELIVERED
+              )
+            ORDER BY m.timestamp ASC
             """)
     List<Message> findUnreadMessages(
             @Param("senderId") String senderId,
-            @Param("receiverId") String receiverId);
+            @Param("receiverId") String receiverId
+    );
 
+    /**
+     * Counts unread messages sent from senderId to receiverId.
+     *
+     * Unread statuses are SENT and DELIVERED.
+     */
     @Query("""
             SELECT COUNT(m)
             FROM Message m
             WHERE m.senderId = :senderId
-            AND m.receiverId = :receiverId
-            AND m.status <> 'SEEN'
+              AND m.receiverId = :receiverId
+              AND m.status IN (
+                  com.chatApplication.message_service.entity.MessageStatus.SENT,
+                  com.chatApplication.message_service.entity.MessageStatus.DELIVERED
+              )
             """)
     Long countUnreadMessages(
             @Param("senderId") String senderId,
-            @Param("receiverId") String receiverId);
+            @Param("receiverId") String receiverId
+    );
 
+    /**
+     * Finds all messages involving a user.
+     * Results are returned from newest to oldest.
+     */
     @Query("""
             SELECT m
             FROM Message m
-            WHERE
-            m.senderId = :userId
-            OR
-            m.receiverId = :userId
+            WHERE m.senderId = :userId
+               OR m.receiverId = :userId
             ORDER BY m.timestamp DESC
             """)
     List<Message> findRecentMessages(
-            @Param("userId") String userId);
+            @Param("userId") String userId
+    );
+
+    // ================================================================
+    // Conversation Read Status
+    // ================================================================
 
     /**
-     * Find unread messages in a conversation where the sender is senderId
-     * and receiver is recipientId, and the status is not yet READ.
-     * Used by the READ_ACK handler to bulk-mark messages as read.
+     * Finds unread messages in a specific conversation.
+     *
+     * Used by the READ_ACK flow to identify messages that
+     * need to be marked as READ.
      */
     @Query("""
             SELECT m
             FROM Message m
             WHERE m.senderId = :senderId
-            AND m.receiverId = :recipientId
-            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+              AND m.receiverId = :recipientId
+              AND m.status IN (
+                  com.chatApplication.message_service.entity.MessageStatus.SENT,
+                  com.chatApplication.message_service.entity.MessageStatus.DELIVERED
+              )
             ORDER BY m.timestamp ASC
             """)
     List<Message> findUnreadMessagesInConversation(
             @Param("senderId") String senderId,
-            @Param("recipientId") String recipientId);
+            @Param("recipientId") String recipientId
+    );
+
+    // ================================================================
+    // Pagination Queries
+    // ================================================================
 
     /**
-     * Paginated query for chat room history.
-     * Finds all messages where the user is either sender or receiver,
-     * ordered by timestamp descending (newest first for pagination).
+     * Finds paginated message history for a user.
+     *
+     * Returns messages where the user is either the sender or receiver.
+     * Results are ordered newest first.
      */
     @Query("""
-            SELECT m FROM Message m
-            WHERE (m.senderId = :userId OR m.receiverId = :userId)
+            SELECT m
+            FROM Message m
+            WHERE m.senderId = :userId
+               OR m.receiverId = :userId
             ORDER BY m.timestamp DESC
             """)
-    Page<Message> findByUserId(@Param("userId") String userId, Pageable pageable);
+    Page<Message> findByUserId(
+            @Param("userId") String userId,
+            Pageable pageable
+    );
 
     /**
-     * Paginated query for chat history between two specific users.
+     * Finds paginated conversation history between two users.
+     * Results are ordered newest first.
      */
     @Query("""
-            SELECT m FROM Message m
+            SELECT m
+            FROM Message m
             WHERE (m.senderId = :user1 AND m.receiverId = :user2)
                OR (m.senderId = :user2 AND m.receiverId = :user1)
             ORDER BY m.timestamp DESC
@@ -110,160 +170,197 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     Page<Message> findConversationPaged(
             @Param("user1") String user1,
             @Param("user2") String user2,
-            Pageable pageable);
+            Pageable pageable
+    );
+
+    // ================================================================
+    // Message Type Queries
+    // ================================================================
 
     /**
-     * Find messages by message type for a specific user.
+     * Finds messages sent by a user filtered by message type.
      */
     List<Message> findBySenderIdAndMessageType(
             String senderId,
-            com.chatApplication.message_service.entity.MessageType messageType);
+            MessageType messageType
+    );
+
+    // ================================================================
+    // Chat Room Read Status
+    // ================================================================
 
     /**
-     * Bulk update all unread messages in a chat room to a new status.
-     * Only updates messages where the recipient is the specified readerId
-     * and the current status is not already READ.
+     * Marks all unread messages in a chat room as the supplied status.
      *
-     * @param chatRoomId the chat room identifier (format: "{senderId}-{recipientId}")
-     * @param readerId   the user ID of the reader
-     * @param status     the new status to set
-     * @param readAt     the timestamp when the message was read
-     * @return the number of messages updated
+     * Only messages received by readerId are updated.
+     * Messages that are already READ are ignored.
+     *
+     * @param chatRoomId chat room identifier in the format:
+     *                   "{senderId}-{receiverId}"
+     * @param readerId   user who is reading the messages
+     * @param status     new message status
+     * @param readAt     timestamp at which messages were read
+     * @return number of updated messages
      */
     @Modifying
     @Query("""
             UPDATE Message m
-            SET m.status = :status, m.readAt = :readAt
+            SET m.status = :status,
+                m.readAt = :readAt
             WHERE (m.senderId || '-' || m.receiverId) = :chatRoomId
-            AND m.receiverId = :readerId
-            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+              AND m.receiverId = :readerId
+              AND m.status IN (
+                  com.chatApplication.message_service.entity.MessageStatus.SENT,
+                  com.chatApplication.message_service.entity.MessageStatus.DELIVERED
+              )
             """)
     int markMessagesAsReadInChatRoom(
             @Param("chatRoomId") String chatRoomId,
             @Param("readerId") String readerId,
             @Param("status") MessageStatus status,
-            @Param("readAt") Instant readAt);
+            @Param("readAt") Instant readAt
+    );
+
+    // ================================================================
+    // Single Message Status Update
+    // ================================================================
 
     /**
-     * Update a single message's status safely.
-     * Only updates if the recipientId matches (prevents unauthorized status manipulation).
+     * Updates the status of a single message.
      *
-     * @param messageId   the message ID to update
-     * @param recipientId the user ID of the recipient (must match)
-     * @param status      the new status to set
-     * @param readAt      the timestamp (set for READ, null for DELIVERED)
-     * @return the number of messages updated (0 or 1)
+     * The recipientId check prevents unauthorized users from
+     * modifying another user's message status.
+     *
+     * @param messageId   message ID
+     * @param recipientId recipient who owns the message
+     * @param status      new message status
+     * @param readAt      read timestamp; normally set for READ
+     * @return number of updated messages (0 or 1)
      */
     @Modifying
     @Query("""
             UPDATE Message m
-            SET m.status = :status, m.readAt = :readAt
+            SET m.status = :status,
+                m.readAt = :readAt
             WHERE m.msgId = :messageId
-            AND m.receiverId = :recipientId
+              AND m.receiverId = :recipientId
             """)
     int updateMessageStatus(
             @Param("messageId") Long messageId,
             @Param("recipientId") String recipientId,
             @Param("status") MessageStatus status,
-            @Param("readAt") Instant readAt);
+            @Param("readAt") Instant readAt
+    );
 
     /**
-     * Find all messages in a chat room where the recipient is the reader
-     * and status is not READ. Used to get message IDs for bulk updates.
+     * Finds unread messages in a chat room for a specific reader.
+     *
+     * Only SENT and DELIVERED messages are considered unread.
      */
     @Query("""
-            SELECT m FROM Message m
+            SELECT m
+            FROM Message m
             WHERE (m.senderId || '-' || m.receiverId) = :chatRoomId
-            AND m.receiverId = :readerId
-            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+              AND m.receiverId = :readerId
+              AND m.status IN (
+                  com.chatApplication.message_service.entity.MessageStatus.SENT,
+                  com.chatApplication.message_service.entity.MessageStatus.DELIVERED
+              )
             ORDER BY m.timestamp ASC
             """)
     List<Message> findUnreadMessagesInChatRoom(
             @Param("chatRoomId") String chatRoomId,
-            @Param("readerId") String readerId);
+            @Param("readerId") String readerId
+    );
 
     // ================================================================
-    // Inbox Overview Queries (Phase 4)
+    // Inbox Overview Queries
     // ================================================================
 
     /**
-     * Count total unread messages for a user across all conversations.
-     * Used for badge display on the inbox icon.
+     * Counts all unread messages received by a user.
      *
-     * @param userId the user ID to count unread messages for
-     * @return total number of unread messages
+     * Used for the inbox/unread badge.
      */
     @Query("""
             SELECT COUNT(m)
             FROM Message m
             WHERE m.receiverId = :userId
-            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+              AND m.status IN (
+                  com.chatApplication.message_service.entity.MessageStatus.SENT,
+                  com.chatApplication.message_service.entity.MessageStatus.DELIVERED
+              )
             """)
-    long countTotalUnreadMessages(@Param("userId") String userId);
+    long countTotalUnreadMessages(
+            @Param("userId") String userId
+    );
 
     /**
-     * Find the latest message for each conversation where the user is a participant.
-     * Returns results ordered by timestamp descending for inbox display.
-     * <p>
-     * This query uses a subquery approach to avoid N+1 overhead:
-     * - Finds all distinct conversation partners
-     * - Retrieves the latest message for each conversation
-     * <p>
-     * Note: For high-performance production use, consider a native query with
-     * window functions. This JPQL version is optimized for correctness.
+     * Finds the latest message for every conversation involving a user.
      *
-     * @param userId the user ID whose inbox to fetch
-     * @return list of latest messages per conversation (newest first)
+     * Uses the highest message ID for each conversation as the latest
+     * message and orders the resulting conversations newest first.
      */
     @Query("""
-            SELECT m FROM Message m
+            SELECT m
+            FROM Message m
             WHERE m.msgId IN (
-                SELECT MAX(m2.msgId) FROM Message m2
-                WHERE m2.senderId = :userId OR m2.receiverId = :userId
+                SELECT MAX(m2.msgId)
+                FROM Message m2
+                WHERE m2.senderId = :userId
+                   OR m2.receiverId = :userId
                 GROUP BY
                     CASE
-                        WHEN m2.senderId = :userId THEN m2.receiverId
+                        WHEN m2.senderId = :userId
+                        THEN m2.receiverId
                         ELSE m2.senderId
                     END
             )
             ORDER BY m.timestamp DESC
             """)
-    List<Message> findLatestMessagesPerConversation(@Param("userId") String userId);
+    List<Message> findLatestMessagesPerConversation(
+            @Param("userId") String userId
+    );
 
     /**
-     * Count unread messages in a specific conversation for a user.
+     * Counts unread messages in a specific conversation.
      *
-     * @param userId    the user ID
-     * @param partnerId the conversation partner's user ID
-     * @return number of unread messages from partnerId to userId
+     * Counts only messages sent by partnerId to userId.
      */
     @Query("""
             SELECT COUNT(m)
             FROM Message m
             WHERE m.senderId = :partnerId
-            AND m.receiverId = :userId
-            AND m.status <> com.chatApplication.message_service.entity.MessageStatus.READ
+              AND m.receiverId = :userId
+              AND m.status IN (
+                  com.chatApplication.message_service.entity.MessageStatus.SENT,
+                  com.chatApplication.message_service.entity.MessageStatus.DELIVERED
+              )
             """)
     long countUnreadInConversation(
             @Param("userId") String userId,
-            @Param("partnerId") String partnerId);
+            @Param("partnerId") String partnerId
+    );
+
+    // ================================================================
+    // Latest Message Between Users
+    // ================================================================
 
     /**
-     * Find the last message between two specific users.
-     * Used for real-time inbox updates when a new message arrives.
+     * Finds messages between two users ordered newest first.
      *
-     * @param user1 first user ID
-     * @param user2 second user ID
-     * @return the most recent message between the two users, or null
+     * Use Pageable with size = 1 when only the latest message is needed.
      */
     @Query("""
-            SELECT m FROM Message m
+            SELECT m
+            FROM Message m
             WHERE (m.senderId = :user1 AND m.receiverId = :user2)
                OR (m.senderId = :user2 AND m.receiverId = :user1)
-            ORDER BY m.timestamp DESC
+            ORDER BY m.timestamp DESC, m.msgId DESC
             """)
     List<Message> findLastMessageBetweenUsers(
             @Param("user1") String user1,
             @Param("user2") String user2,
-            Pageable pageable);
+            Pageable pageable
+    );
 }

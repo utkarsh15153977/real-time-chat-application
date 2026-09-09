@@ -4,8 +4,8 @@ import com.chatApplication.message_service.dto.PresignedUrlRequestDTO;
 import com.chatApplication.message_service.dto.PresignedUrlResponseDTO;
 import com.chatApplication.message_service.service.MediaService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,10 +34,14 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/media")
-@RequiredArgsConstructor
+@ConditionalOnExpression("'${aws.s3.access-key:}' != ''")
 public class MediaController {
 
     private final MediaService mediaService;
+
+    public MediaController(MediaService mediaService) {
+        this.mediaService = mediaService;
+    }
 
     /**
      * Generates a presigned S3 PUT URL for uploading media files.

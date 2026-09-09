@@ -104,10 +104,10 @@ public class AuthServiceImpl implements AuthService {
                     savedUser.getId()
             );
 
-            // Generate registration OTP
+            // Generate registration OTP (Uses REGISTRATION_EMAIL purpose)
             otpService.generateOtp(
                     savedUser.getId(),
-                    OtpPurpose.REGISTRATION
+                    OtpPurpose.REGISTRATION_EMAIL
             );
 
             log.info(
@@ -122,7 +122,7 @@ public class AuthServiceImpl implements AuthService {
                     .email(savedUser.getEmail())
                     .message(
                             "Registration successful. " +
-                                    "Please verify the OTP sent to your email and mobile."
+                                    "Please verify the OTP sent to your email."
                     )
                     .requiresTwoFactor(true)
                     .build();
@@ -149,100 +149,98 @@ public class AuthServiceImpl implements AuthService {
     // VERIFY REGISTRATION OTP
     // =========================================================
 
-//    @Override
-//    @Transactional
-//    public AuthResponse verifyRegistrationOtp(
-//            Long userId,
-//            String otp) {
-//
-//        log.info(
-//                "Verifying registration OTP for user ID: {}",
-//                userId
-//        );
-//
-//        try {
-//
-//            User user = userRepository
-//                    .findById(userId)
-//                    .orElseThrow(() ->
-//                            new UserNotFoundException(
-//                                    "User not found with ID: " + userId
-//                            )
-//                    );
-//
-//            if (Boolean.TRUE.equals(user.getEmailVerified())
-//                    && Boolean.TRUE.equals(user.getPhoneVerified())) {
-//
-//                return AuthResponse.builder()
-//                        .token(null)
-//                        .userId(user.getId())
-//                        .name(user.getName())
-//                        .email(user.getEmail())
-//                        .message("User is already verified")
-//                        .requiresTwoFactor(false)
-//                        .build();
-//            }
-//
-//            boolean valid = otpService.verifyOtp(
-//                    userId,
-//                    otp,
-//                    OtpPurpose.REGISTRATION
-//            );
-//
-//            if (!valid) {
-//
-//                log.warn(
-//                        "Invalid or expired registration OTP for user ID: {}",
-//                        userId
-//                );
-//
-//                throw new InvalidCredentialsException(
-//                        "Invalid or expired OTP"
-//                );
-//            }
-//
-//            user.setEmailVerified(true);
-//            user.setPhoneVerified(true);
-//
-//            userRepository.save(user);
-//
-//            log.info(
-//                    "Registration verification successful for user ID: {}",
-//                    userId
-//            );
-//
-//            return AuthResponse.builder()
-//                    .token(null)
-//                    .userId(user.getId())
-//                    .name(user.getName())
-//                    .email(user.getEmail())
-//                    .message(
-//                            "Registration verified successfully. " +
-//                                    "You can now login."
-//                    )
-//                    .requiresTwoFactor(false)
-//                    .build();
-//
-//        } catch (UserNotFoundException |
-//                 InvalidCredentialsException |
-//                 IllegalStateException e) {
-//
-//            throw e;
-//
-//        } catch (Exception e) {
-//
-//            log.error(
-//                    "Unexpected error during OTP verification " +
-//                            "for user ID: {}",
-//                    userId,
-//                    e
-//            );
-//
-//            throw new RuntimeException(
-//                    "OTP verification failed: " + e.getMessage()
-//            );
-//        }
-//    }
+    @Override
+    @Transactional
+    public AuthResponse verifyRegistrationOtp(
+            Long userId,
+            String otp) {
+
+        log.info(
+                "Verifying registration email OTP for user ID: {}",
+                userId
+        );
+
+        try {
+
+            User user = userRepository
+                    .findById(userId)
+                    .orElseThrow(() ->
+                            new UserNotFoundException(
+                                    "User not found with ID: " + userId
+                            )
+                    );
+
+            // Check if email is already verified
+            if (Boolean.TRUE.equals(user.getEmailVerified())) {
+                return AuthResponse.builder()
+                        .token(null)
+                        .userId(user.getId())
+                        .name(user.getName())
+                        .email(user.getEmail())
+                        .message("Email is already verified")
+                        .requiresTwoFactor(false)
+                        .build();
+            }
+
+            // Verify OTP using REGISTRATION_EMAIL purpose
+            boolean valid = otpService.verifyOtp(
+                    userId,
+                    otp,
+                    OtpPurpose.REGISTRATION_EMAIL
+            );
+
+            if (!valid) {
+
+                log.warn(
+                        "Invalid or expired registration email OTP for user ID: {}",
+                        userId
+                );
+
+                throw new InvalidCredentialsException(
+                        "Invalid or expired OTP"
+                );
+            }
+
+            // Mark email as verified
+            user.setEmailVerified(true);
+            userRepository.save(user);
+
+            log.info(
+                    "Registration email verification successful for user ID: {}",
+                    userId
+            );
+
+            return AuthResponse.builder()
+                    .token(null)
+                    .userId(user.getId())
+                    .name(user.getName())
+                    .email(user.getEmail())
+                    .message(
+                            "Email verified successfully. You can now login."
+                    )
+                    .requiresTwoFactor(false)
+                    .build();
+
+        } catch (UserNotFoundException |
+                 InvalidCredentialsException |
+                 IllegalStateException e) {
+
+            throw e;
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Unexpected error during registration email OTP verification " +
+                            "for user ID: {}",
+                    userId,
+                    e
+            );
+
+            throw new RuntimeException(
+                    "OTP verification failed: " + e.getMessage()
+            );
+        }
+    }
 
     // =========================================================
     // LOGIN
@@ -273,16 +271,16 @@ public class AuthServiceImpl implements AuthService {
                         );
                     });
 
-            if (!Boolean.TRUE.equals(user.getEmailVerified())
-                    || !Boolean.TRUE.equals(user.getPhoneVerified())) {
+            // Require email verification for login (phone check removed for initial testing)
+            if (!Boolean.TRUE.equals(user.getEmailVerified())) {
 
                 log.warn(
-                        "Login rejected: User {} is not verified",
+                        "Login rejected: User {} email is not verified",
                         user.getEmail()
                 );
 
                 throw new InvalidCredentialsException(
-                        "Please verify your email and phone number first"
+                        "Please verify your email first"
                 );
             }
 
@@ -320,9 +318,6 @@ public class AuthServiceImpl implements AuthService {
                         "Login 2FA OTP generated for user ID: {}",
                         user.getId()
                 );
-
-                // IMPORTANT:
-                // JWT is NOT generated before OTP verification.
 
                 return AuthResponse.builder()
                         .token(null)
@@ -394,10 +389,6 @@ public class AuthServiceImpl implements AuthService {
 
         try {
 
-            // -------------------------------------------------
-            // Validate input
-            // -------------------------------------------------
-
             if (email == null || email.isBlank()) {
 
                 throw new InvalidCredentialsException(
@@ -412,10 +403,6 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
 
-            // -------------------------------------------------
-            // Find user
-            // -------------------------------------------------
-
             User user = userRepository
                     .findByEmail(email)
                     .orElseThrow(() ->
@@ -424,21 +411,12 @@ public class AuthServiceImpl implements AuthService {
                             )
                     );
 
-            // -------------------------------------------------
-            // Check 2FA
-            // -------------------------------------------------
-
-            if (!Boolean.TRUE.equals(
-                    user.getTwoFactorEnabled())) {
+            if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
 
                 throw new InvalidCredentialsException(
                         "Two-factor authentication is not enabled"
                 );
             }
-
-            // -------------------------------------------------
-            // Verify OTP
-            // -------------------------------------------------
 
             boolean valid = otpService.verifyOtp(
                     user.getId(),
@@ -458,17 +436,9 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
 
-            // -------------------------------------------------
-            // Update login information
-            // -------------------------------------------------
-
             user.setLastLogin(LocalDateTime.now());
 
             userRepository.save(user);
-
-            // -------------------------------------------------
-            // Generate JWT ONLY after successful OTP
-            // -------------------------------------------------
 
             String token = jwtUtil.generateToken(user);
 
@@ -507,6 +477,10 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    // =========================================================
+    // FORGOT & RESET PASSWORD
+    // =========================================================
+
     @Override
     public String forgotPassword(String email) {
 
@@ -533,7 +507,6 @@ public class AuthServiceImpl implements AuthService {
                 OtpPurpose.PASSWORD_RESET
         );
 
-        // DEVELOPMENT ONLY
         log.debug(
                 "Password reset OTP for {}: {}",
                 normalizedEmail,
@@ -608,9 +581,10 @@ public class AuthServiceImpl implements AuthService {
 
         return "Password reset successful";
     }
-// =========================================================
-// LOGOUT
-// =========================================================
+
+    // =========================================================
+    // LOGOUT
+    // =========================================================
 
     @Override
     @Transactional
@@ -620,10 +594,6 @@ public class AuthServiceImpl implements AuthService {
 
         try {
 
-            // -------------------------------------------------
-            // Validate token
-            // -------------------------------------------------
-
             if (token == null || token.isBlank()) {
 
                 log.warn("Logout failed: Token is empty");
@@ -632,10 +602,6 @@ public class AuthServiceImpl implements AuthService {
                         "Token cannot be empty"
                 );
             }
-
-            // -------------------------------------------------
-            // Remove Bearer prefix
-            // -------------------------------------------------
 
             if (token.startsWith("Bearer ")) {
                 token = token.substring(7).trim();
@@ -648,10 +614,6 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
 
-            // -------------------------------------------------
-            // Validate JWT
-            // -------------------------------------------------
-
             if (!jwtUtil.validateToken(token)) {
 
                 log.warn(
@@ -662,10 +624,6 @@ public class AuthServiceImpl implements AuthService {
                         "Invalid or expired token"
                 );
             }
-
-            // -------------------------------------------------
-            // Check if token is already blacklisted
-            // -------------------------------------------------
 
             if (blacklistRepository
                     .findByToken(token)
@@ -685,10 +643,6 @@ public class AuthServiceImpl implements AuthService {
                         .build();
             }
 
-            // -------------------------------------------------
-            // Blacklist JWT
-            // -------------------------------------------------
-
             BlacklistedToken blacklistedToken =
                     BlacklistedToken.builder()
                             .token(token)
@@ -703,9 +657,6 @@ public class AuthServiceImpl implements AuthService {
                     "JWT token blacklisted successfully"
             );
 
-            // -------------------------------------------------
-            // Return response
-            // -------------------------------------------------
             return AuthResponse.builder()
                     .token(null)
                     .userId(null)
@@ -714,6 +665,7 @@ public class AuthServiceImpl implements AuthService {
                     .message("Logout successful")
                     .requiresTwoFactor(false)
                     .build();
+
         } catch (IllegalArgumentException e) {
             log.warn(
                     "Logout validation failed: {}",
@@ -747,8 +699,7 @@ public class AuthServiceImpl implements AuthService {
         boolean hasDigit = false;
         boolean hasSpecial = false;
 
-        String specialChars =
-                "!@#$%^&*()_+-=[]{}|;:,.<>?";
+        String specialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?";
 
         for (char c : password.toCharArray()) {
 
@@ -769,104 +720,6 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
-        return hasUpper
-                && hasLower
-                && hasDigit
-                && hasSpecial;
-    }
-    @Override
-    @Transactional
-    public AuthResponse verifyRegistrationOtp(
-            Long userId,
-            String otp) {
-
-        log.info(
-                "Verifying registration email OTP for user ID: {}",
-                userId
-        );
-
-        try {
-
-            User user = userRepository
-                    .findById(userId)
-                    .orElseThrow(() ->
-                            new UserNotFoundException(
-                                    "User not found with ID: " + userId
-                            )
-                    );
-
-            // Already email verified
-            if (Boolean.TRUE.equals(user.getEmailVerified())) {
-
-                return AuthResponse.builder()
-                        .token(null)
-                        .userId(user.getId())
-                        .name(user.getName())
-                        .email(user.getEmail())
-                        .message("Email is already verified")
-                        .requiresTwoFactor(false)
-                        .build();
-            }
-
-            // Verify EMAIL OTP
-            boolean valid = otpService.verifyOtp(
-                    userId,
-                    otp,
-                    OtpPurpose.REGISTRATION_EMAIL
-            );
-
-            if (!valid) {
-
-                log.warn(
-                        "Invalid or expired registration email OTP for user ID: {}",
-                        userId
-                );
-
-                throw new InvalidCredentialsException(
-                        "Invalid or expired OTP"
-                );
-            }
-
-            // Only email is verified here
-            user.setEmailVerified(true);
-
-            userRepository.save(user);
-
-            log.info(
-                    "Registration email verification successful for user ID: {}",
-                    userId
-            );
-
-            return AuthResponse.builder()
-                    .token(null)
-                    .userId(user.getId())
-                    .name(user.getName())
-                    .email(user.getEmail())
-                    .message(
-                            "Email verified successfully. " +
-                                    "You can now continue registration/login."
-                    )
-                    .requiresTwoFactor(false)
-                    .build();
-
-        } catch (UserNotFoundException |
-                 InvalidCredentialsException |
-                 IllegalStateException e) {
-
-            throw e;
-
-        } catch (Exception e) {
-
-            log.error(
-                    "Unexpected error during registration email OTP verification " +
-                            "for user ID: {}",
-                    userId,
-                    e
-            );
-
-            throw new RuntimeException(
-                    "OTP verification failed: " + e.getMessage()
-            );
-        }
+        return hasUpper && hasLower && hasDigit && hasSpecial;
     }
 }

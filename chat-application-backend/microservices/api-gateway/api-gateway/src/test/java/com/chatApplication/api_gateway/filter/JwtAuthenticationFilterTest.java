@@ -303,7 +303,7 @@ class JwtAuthenticationFilterTest {
         String masked = SecurityLogUtils.maskToken(longToken);
         assertThat(masked).startsWith("eyJhbGciOi");
         assertThat(masked).contains("[...MASKED]");
-        assertThat(masked).endsWith("ure?");
+        assertThat(masked).endsWith("ure");
 
         // Short token should be fully masked
         assertThat(SecurityLogUtils.maskToken("short")).isEqualTo("[MASKED]");

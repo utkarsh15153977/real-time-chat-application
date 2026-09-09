@@ -1,0 +1,141 @@
+version: '3.8'
+
+networks:
+  blink-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+
+services:
+  # ---------------------------------------------------------------------------
+  # 1. PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: blink-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blink_db
+      POSTGRES_USER: blink_user
+      POSTGRES_PASSWORD: blink_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blink_user -d blink_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - blink-network
+
+  # ---------------------------------------------------------------------------
+  # 2. Redis Distributed Cache & Pub/Sub
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: blink-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - blink-network
+
+  # ---------------------------------------------------------------------------
+  # 3. Apache Kafka (KRaft Mode)
+  # ---------------------------------------------------------------------------
+  kafka:
+    container_name: blink-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - blink-network
+
+  # ---------------------------------------------------------------------------
+  # 4. API Gateway Service
+  # ---------------------------------------------------------------------------
+  api-gateway:
+    build:
+      context: ../../..
+      dockerfile: ../../../Dockerfile
+    container_name: blink-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      MESSAGE_SERVICE_URL: http://message-service:8081
+      INTERNAL_SECURITY_SECRET: ${INTERNAL_SECURITY_SECRET:super-secret-internal-key-blink-2026}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - blink-network
+
+  # ---------------------------------------------------------------------------
+  # 5. Message Service
+  # ---------------------------------------------------------------------------
+  message-service:
+    build:
+      context: ../../../../../message-service/message-service
+      dockerfile: ../../../../../message-service/message-service/Dockerfile
+    container_name: blink-message-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/blink_db
+      SPRING_DATASOURCE_USERNAME: blink_user
+      SPRING_DATASOURCE_PASSWORD: blink_password
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_SECURITY_SECRET: ${INTERNAL_SECURITY_SECRET:super-secret-internal-key-blink-2026}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - blink-network

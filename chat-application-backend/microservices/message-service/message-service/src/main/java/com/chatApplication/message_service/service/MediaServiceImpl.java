@@ -4,9 +4,9 @@ import com.chatApplication.message_service.dto.PresignedUrlRequestDTO;
 import com.chatApplication.message_service.dto.PresignedUrlResponseDTO;
 import com.chatApplication.message_service.exception.MediaValidationException;
 import com.chatApplication.message_service.exception.S3ServiceException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -58,10 +58,14 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
+@ConditionalOnExpression("'${aws.s3.access-key:}' != ''")
 public class MediaServiceImpl implements MediaService {
 
     private final S3Presigner s3Presigner;
+
+    public MediaServiceImpl(S3Presigner s3Presigner) {
+        this.s3Presigner = s3Presigner;
+    }
 
     @Value("${aws.s3.bucket-name}")
     private String bucketName;

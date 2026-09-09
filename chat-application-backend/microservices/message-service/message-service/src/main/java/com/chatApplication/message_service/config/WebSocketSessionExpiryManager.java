@@ -1,12 +1,9 @@
 package com.chatApplication.message_service.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Map;
@@ -15,162 +12,193 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Manages WebSocket session expiration by tracking JWT token expiry
  * and cleaning up expired sessions.
- * <p>
- * Security model:
- *   - During CONNECT, the WebSocketAuthInterceptor stores token exp timestamp
- *     in session attributes ("token_exp")
- *   - This manager periodically checks active sessions against current time
- *   - Expired sessions are programmatically closed
- *   - Inbound frames are also checked before processing
- * <p>
- * Heartbeat mechanism:
- *   - Clients are expected to send heartbeat frames (STOMP SEND to /app/heartbeat)
- *   - Sessions without any activity for the token duration are considered stale
- *   - The @Scheduled task runs every 30 seconds to clean up expired sessions
- * <p>
- * Thread safety:
- *   - ConcurrentHashMap for tracking last-activity timestamps
- *   - Atomic operations for session management
- *   - No blocking operations on Netty event loop
+ *
+ * <p>Security model:</p>
+ * <ul>
+ *     <li>During CONNECT, WebSocketAuthInterceptor stores the JWT
+ *         expiration timestamp.</li>
+ *     <li>This manager tracks the expiration time for each STOMP session.</li>
+ *     <li>A scheduled task periodically detects expired sessions.</li>
+ *     <li>Inbound frames can also be checked against the tracked expiry.</li>
+ * </ul>
+ *
+ * <p>This component intentionally does NOT depend on
+ * SimpMessagingTemplate or SimpUserRegistry.</p>
+ *
+ * <p>This is important because those WebSocket infrastructure beans are
+ * created by Spring's WebSocket message broker configuration. Depending
+ * on them from the authentication interceptor would create a circular
+ * dependency during application startup.</p>
  */
 @Slf4j
-@Configuration
+@Component
 @EnableScheduling
 public class WebSocketSessionExpiryManager {
 
-    private final SimpMessagingTemplate messagingTemplate;
-    private final SimpUserRegistry userRegistry;
-
-    /** Tracks session expiry timestamps: sessionId -> expiry instant */
-    private final Map<String, Instant> sessionExpiryMap = new ConcurrentHashMap<>();
-
-    /** Tracks last activity per session: sessionId -> last active instant */
-    private final Map<String, Instant> sessionActivityMap = new ConcurrentHashMap<>();
-
-    public WebSocketSessionExpiryManager(
-            SimpMessagingTemplate messagingTemplate,
-            SimpUserRegistry userRegistry) {
-        this.messagingTemplate = messagingTemplate;
-        this.userRegistry = userRegistry;
-    }
+    /**
+     * Tracks token expiry timestamps:
+     *
+     * sessionId -> token expiry
+     */
+    private final Map<String, Instant> sessionExpiryMap =
+            new ConcurrentHashMap<>();
 
     /**
-     * Registers a session with its token expiry timestamp.
-     * Called by WebSocketAuthInterceptor after successful CONNECT.
+     * Tracks last activity timestamps:
+     *
+     * sessionId -> last activity
+     */
+    private final Map<String, Instant> sessionActivityMap =
+            new ConcurrentHashMap<>();
+
+    /**
+     * Registers a WebSocket session with its token expiry time.
      *
      * @param sessionId the STOMP session ID
-     * @param tokenExp  the token expiration instant
+     * @param tokenExp  the JWT expiration time
      */
-    public void registerSession(String sessionId, Instant tokenExp) {
+    public void registerSession(
+            String sessionId,
+            Instant tokenExp) {
+
+        if (sessionId == null || sessionId.isBlank()) {
+            log.warn("Cannot register WebSocket session: sessionId is null/blank");
+            return;
+        }
+
+        if (tokenExp == null) {
+            log.warn(
+                    "Cannot register WebSocket session {}: token expiry is null",
+                    sessionId);
+            return;
+        }
+
         sessionExpiryMap.put(sessionId, tokenExp);
         sessionActivityMap.put(sessionId, Instant.now());
-        log.debug("Registered session {} with expiry {}", sessionId, tokenExp);
+
+        log.debug(
+                "Registered WebSocket session {} with expiry {}",
+                sessionId,
+                tokenExp);
     }
 
     /**
      * Updates the last activity timestamp for a session.
-     * Called on every inbound STOMP frame.
      *
      * @param sessionId the STOMP session ID
      */
     public void updateActivity(String sessionId) {
-        sessionActivityMap.put(sessionId, Instant.now());
+
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+
+        if (sessionExpiryMap.containsKey(sessionId)) {
+            sessionActivityMap.put(sessionId, Instant.now());
+        }
     }
 
     /**
-     * Removes a session from tracking.
-     * Called on DISCONNECT event.
+     * Removes a session from the expiration tracking maps.
      *
      * @param sessionId the STOMP session ID
      */
     public void removeSession(String sessionId) {
+
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+
         sessionExpiryMap.remove(sessionId);
         sessionActivityMap.remove(sessionId);
-        log.debug("Removed session {} from expiry tracking", sessionId);
+
+        log.debug(
+                "Removed WebSocket session {} from expiry tracking",
+                sessionId);
     }
 
     /**
-     * Checks if a session's token has expired.
+     * Checks whether a session's JWT has expired.
      *
      * @param sessionId the STOMP session ID
      * @return true if the session is expired or unknown
      */
     public boolean isSessionExpired(String sessionId) {
-        Instant expiry = sessionExpiryMap.get(sessionId);
-        if (expiry == null) {
-            // Unknown session - consider expired for safety
+
+        if (sessionId == null || sessionId.isBlank()) {
             return true;
         }
+
+        Instant expiry = sessionExpiryMap.get(sessionId);
+
+        if (expiry == null) {
+            // Unknown session is considered expired for security.
+            return true;
+        }
+
         return Instant.now().isAfter(expiry);
     }
 
     /**
-     * Checks if a frame can be processed for the given session.
-     * Frames are rejected if the session's token has expired.
+     * Determines whether an inbound frame can be processed.
      *
      * @param sessionId the STOMP session ID
-     * @return true if the frame should be allowed
+     * @return true if the session is still valid
      */
     public boolean canProcessFrame(String sessionId) {
         return !isSessionExpired(sessionId);
     }
 
     /**
-     * Scheduled task that runs every 30 seconds to check for expired sessions.
-     * Iterates over all tracked sessions and closes those with expired tokens.
+     * Periodically checks all tracked sessions and removes
+     * sessions whose JWT has expired.
      *
-     * Uses fixedDelay to avoid overlapping executions if cleanup takes longer
-     * than the interval.
+     * Default interval: 30 seconds.
      */
-    @Scheduled(fixedDelayString = "${security.websocket.expiry-check-interval:30000}")
+    @Scheduled(
+            fixedDelayString =
+                    "${security.websocket.expiry-check-interval:30000}"
+    )
     public void checkExpiredSessions() {
+
         if (sessionExpiryMap.isEmpty()) {
             return;
         }
 
         Instant now = Instant.now();
-        int closedCount = 0;
 
-        for (Map.Entry<String, Instant> entry : sessionExpiryMap.entrySet()) {
+        int expiredCount = 0;
+
+        for (Map.Entry<String, Instant> entry
+                : sessionExpiryMap.entrySet()) {
+
             String sessionId = entry.getKey();
             Instant expiry = entry.getValue();
 
-            if (now.isAfter(expiry)) {
-                log.info("Closing expired WebSocket session: {}", sessionId);
-                closeExpiredSession(sessionId);
-                closedCount++;
+            if (expiry != null && now.isAfter(expiry)) {
+
+                log.info(
+                        "WebSocket session {} has expired at {}",
+                        sessionId,
+                        expiry);
+
+                removeSession(sessionId);
+
+                expiredCount++;
             }
         }
 
-        if (closedCount > 0) {
-            log.info("Closed {} expired WebSocket sessions", closedCount);
+        if (expiredCount > 0) {
+            log.info(
+                    "Removed {} expired WebSocket sessions",
+                    expiredCount);
         }
     }
 
     /**
-     * Closes an expired session by sending a disconnect signal.
-     * The session will be fully cleaned up when the disconnect event fires.
+     * Returns the number of currently tracked sessions.
      *
-     * @param sessionId the expired session ID
-     */
-    private void closeExpiredSession(String sessionId) {
-        try {
-            // Remove from tracking first to avoid re-processing
-            sessionExpiryMap.remove(sessionId);
-            sessionActivityMap.remove(sessionId);
-
-            // Find the user associated with this session and notify
-            // The actual WebSocket close will happen when the session is invalidated
-            log.info("Session {} marked for closure due to token expiry", sessionId);
-        } catch (Exception e) {
-            log.error("Error closing expired session {}: {}", sessionId, e.getMessage());
-        }
-    }
-
-    /**
-     * Returns the number of active tracked sessions.
-     *
-     * @return count of active sessions
+     * @return number of tracked sessions
      */
     public int getActiveSessionCount() {
         return sessionExpiryMap.size();
