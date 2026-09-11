@@ -91,11 +91,27 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
         // Only authenticate CONNECT frames
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+
+            log.info("========== STOMP CONNECT RECEIVED ==========");
+
+            log.info(
+                    "Session ID: {}",
+                    accessor.getSessionId()
+            );
+
+            // Log only header names - NEVER log Authorization value
+            log.info(
+                    "Native headers: {}",
+                    accessor.toNativeHeaderMap().keySet()
+            );
+
             authenticateConnectFrame(accessor);
         }
 
-        // Return new message with modified headers (wrap creates a separate accessor)
-        return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
+        return MessageBuilder.createMessage(
+                message.getPayload(),
+                accessor.getMessageHeaders()
+        );
     }
 
     /**

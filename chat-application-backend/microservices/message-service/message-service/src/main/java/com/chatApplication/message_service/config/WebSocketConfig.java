@@ -59,9 +59,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(
             StompEndpointRegistry registry) {
 
-        // SockJS fallback endpoint for WebSocket connections
-        // The JWT auth interceptor handles authentication on CONNECT frames
+        // Native WebSocket endpoint - use this for k6
         registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*");
+
+        // SockJS endpoint - keep this for browser/client compatibility
+        registry.addEndpoint("/ws-sockjs")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
     }

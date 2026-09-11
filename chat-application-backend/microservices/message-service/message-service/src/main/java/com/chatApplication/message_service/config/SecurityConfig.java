@@ -6,6 +6,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Security configuration for the message-service.
@@ -23,7 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * Paths:
  *   - /test/**: Internal testing (no auth)
  *   - /actuator/**: Health checks (no auth)
- *   - /ws/**: WebSocket handshake (authenticated by WebSocketAuthInterceptor)
+ *   - /ws, /ws/**: WebSocket handshake (authenticated by WebSocketAuthInterceptor)
  *   - All others: require valid X-Internal-Secret header
  */
 @Configuration
@@ -42,6 +45,8 @@ public class SecurityConfig {
             throws Exception {
 
         http
+                .cors(cors -> cors.configurationSource(
+                        corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .addFilterBefore(internalSecurityFilter,
                         UsernamePasswordAuthenticationFilter.class)
@@ -60,12 +65,33 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/devices/**").permitAll()
                         // Presence REST API (Gateway-injected X-User-Id)
                         .requestMatchers("/api/presence/**").permitAll()
-                        // WebSocket handshake (authenticated by WebSocketAuthInterceptor)
-                        .requestMatchers("/ws/**").permitAll()
+                        // WebSocket handshake - both exact /ws and /ws/**
+                        // authenticated by WebSocketAuthInterceptor on STOMP CONNECT
+                        .requestMatchers("/ws", "/ws/**").permitAll()
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 );
 
         return http.build();
+    }
+
+    /**
+     * CORS configuration for WebSocket upgrade and REST endpoints.
+     * Must be consistent with WebSocketConfig.setAllowedOriginPatterns("*").
+     * Without this, Spring Security's default CORS handling can reject
+     * WebSocket upgrade requests that carry an Origin header.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.addAllowedOriginPattern("*");
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }

@@ -1,25 +1,20 @@
 -- V3: Add delivery status tracking and read_at timestamp
 -- Supports the SENT -> DELIVERED -> READ state machine
--- Includes composite indexes for fast status updates
+-- Includes composite index for fast bulk status updates
 
--- Add status column
+-- Add status column with default value for existing rows
 ALTER TABLE message_table
-    ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'SENT';
+    ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'SENT';
 
--- Add read_at timestamp
+-- Add read_at timestamp for tracking when a message was read
 ALTER TABLE message_table
-    ADD COLUMN IF NOT EXISTS read_at TIMESTAMP WITH TIME ZONE NULL;
+    ADD COLUMN read_at TIMESTAMP WITH TIME ZONE NULL;
 
--- Add delivered_at timestamp
-ALTER TABLE message_table
-    ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE NULL;
-
--- Create indexes
-CREATE INDEX IF NOT EXISTS idx_messages_chatroom_status
+-- Composite index for fast bulk status updates by chat_room_id and status
+-- Used by markChatRoomAsRead to efficiently find unread messages in a room
+CREATE INDEX idx_messages_chatroom_status
     ON message_table (sender_id, receiver_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_messages_read_at
+-- Index for efficient read_at queries
+CREATE INDEX idx_messages_read_at
     ON message_table (read_at);
-
-CREATE INDEX IF NOT EXISTS idx_messages_receiver_status
-    ON message_table (receiver_id, status);

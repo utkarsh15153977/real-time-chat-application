@@ -42,8 +42,7 @@
 		<!-- AWS SDK -->
 		<aws-sdk.version>2.25.16</aws-sdk.version>
 
-		<!-- Flyway -->
-		<flyway.version>10.11.0</flyway.version>
+
 
 		<!-- Lombok -->
 		<lombok.version>1.18.32</lombok.version>
@@ -159,13 +158,6 @@
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
-			<version>${flyway.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-database-postgresql</artifactId>
-			<version>${flyway.version}</version>
 		</dependency>
 
 
@@ -349,21 +341,10 @@
 			<plugin>
 				<groupId>org.flywaydb</groupId>
 				<artifactId>flyway-maven-plugin</artifactId>
-				<version>${flyway.version}</version>
-
-				<dependencies>
-
-					<dependency>
-						<groupId>org.flywaydb</groupId>
-						<artifactId>flyway-database-postgresql</artifactId>
-						<version>${flyway.version}</version>
-					</dependency>
-
-				</dependencies>
 
 				<configuration>
 
-					<url>jdbc:postgresql://localhost:5432/message_db</url>
+					<url>jdbc:postgresql://localhost:5432/chat_application</url>
 					<user>postgres</user>
 					<password>postgres</password>
 

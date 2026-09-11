@@ -14,9 +14,10 @@ spring:
   cloud:
     gateway:
       routes:
+
         # WebSocket Route
         - id: message-service-ws
-          uri: lb:ws://message-service
+          uri: ws://message-service:8081
           predicates:
             - Path=/ws/**
 
@@ -28,13 +29,13 @@ spring:
           filters:
             - StripPrefix=0
 
-#        - id: message-service
-#          uri: lb://message-service
-#          predicates:
-#            - Path=/api/messages/**
-#            - Path=/api/v1/media/**
-#          filters:
-#            - StripPrefix=0
+      #        - id: message-service
+      #          uri: lb://message-service
+      #          predicates:
+      #            - Path=/api/messages/**
+      #            - Path=/api/v1/media/**
+      #          filters:
+      #            - StripPrefix=0
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
@@ -60,12 +61,13 @@ spring:
               - X-User-Id
             maxAge: 3600
 
-# Eureka Client Setup (Connects Gateway to all registered services)
+# Eureka Client Setup
 eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
     fetch-registry: true
     register-with-eureka: true
+
   instance:
     prefer-ip-address: true
