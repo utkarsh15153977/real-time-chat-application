@@ -8,7 +8,15 @@ import {
     generateChatMessage,
 } from '../config/test-env.js';
 
+
+/*
+ * ============================================================
+ * WebSocket Configuration
+ * ============================================================
+ */
+
 const WS_URL = 'ws://localhost:8083/ws';
+
 
 /*
  * ============================================================
@@ -102,9 +110,9 @@ export const options = {
  *
  *     WebSocket
  *          ↓
- *     raw STOMP frame
+ *     Raw STOMP frame
  *
- * Do NOT JSON.stringify() the frame.
+ * Do NOT JSON.stringify() the STOMP frame.
  */
 
 function sendStompFrame(
@@ -134,16 +142,29 @@ function parseStompFrame(frame) {
 
     let cleaned = String(frame);
 
-    // Remove STOMP NULL terminator.
+    /*
+     * Remove STOMP NULL terminator.
+     */
     cleaned = cleaned.replace(/\u0000$/, '');
 
-    // Remove heartbeat/newline characters before command.
+    /*
+     * Remove heartbeat/newline characters
+     * before the STOMP command.
+     */
     cleaned = cleaned.replace(/^\n+/, '');
 
     if (!cleaned) {
         return null;
     }
 
+    /*
+     * STOMP frame structure:
+     *
+     * COMMAND
+     * header:value
+     *
+     * body
+     */
     const separatorIndex =
         cleaned.indexOf('\n\n');
 
@@ -218,21 +239,47 @@ export default function () {
 
     const startTime = Date.now();
 
+    /*
+     * STOMP connection state.
+     */
     let stompConnected = false;
+
+    /*
+     * Tracks whether at least one message
+     * was successfully sent.
+     */
     let messageSent = false;
+
+    /*
+     * True once intentional shutdown begins.
+     *
+     * This prevents periodic SEND operations
+     * and ignores expected shutdown ERROR frames.
+     */
+    let shuttingDown = false;
+
+    /*
+     * True when the WebSocket actually closes.
+     */
     let connectionClosed = false;
 
+    /*
+     * Unique ID for this VU iteration.
+     */
     const loadTestId =
         `${__VU}-${__ITER}-${Date.now()}`;
 
-    // Directly use the local WebSocket endpoint.
+    /*
+     * Directly connect to the local
+     * message-service WebSocket endpoint.
+     */
     const wsUrl = WS_URL;
 
 
     /*
-     * ----------------------------------------------------------
-     * Test information
-     * ----------------------------------------------------------
+     * ==========================================================
+     * Test Information
+     * ==========================================================
      */
 
     console.log('');
@@ -263,12 +310,14 @@ export default function () {
 
 
     /*
-     * ----------------------------------------------------------
-     * WebSocket handshake parameters
-     * ----------------------------------------------------------
+     * ==========================================================
+     * WebSocket Handshake Parameters
+     * ==========================================================
      *
-     * Spring STOMP over WebSocket negotiates the STOMP
-     * sub-protocol through Sec-WebSocket-Protocol.
+     * Spring STOMP over WebSocket negotiates
+     * the STOMP sub-protocol through:
+     *
+     *     Sec-WebSocket-Protocol
      *
      * v12.stomp = STOMP 1.2
      */
@@ -281,9 +330,9 @@ export default function () {
 
 
     /*
-     * ----------------------------------------------------------
-     * WebSocket connection
-     * ----------------------------------------------------------
+     * ==========================================================
+     * WebSocket Connection
+     * ==========================================================
      */
 
     const response = ws.connect(
@@ -294,7 +343,7 @@ export default function () {
 
             /*
              * ==================================================
-             * OPEN
+             * WebSocket OPEN
              * ==================================================
              */
 
@@ -307,18 +356,17 @@ export default function () {
                     );
 
                     /*
-                     * Do not print the actual JWT.
+                     * Never print the actual JWT.
                      */
-
                     console.log(
                         `[VU ${__VU}] JWT configured: ${Boolean(ENV.AUTH_TOKEN)}`
                     );
 
 
                     /*
-                     * --------------------------------------------------
+                     * ==================================================
                      * STOMP CONNECT
-                     * --------------------------------------------------
+                     * ==================================================
                      */
 
                     const connectFrame =
@@ -336,7 +384,6 @@ export default function () {
                             }
                         );
 
-
                     sendStompFrame(
                         socket,
                         connectFrame,
@@ -348,7 +395,7 @@ export default function () {
 
             /*
              * ==================================================
-             * MESSAGE
+             * WebSocket MESSAGE
              * ==================================================
              */
 
@@ -374,9 +421,9 @@ export default function () {
 
 
                     /*
-                     * ==========================================
-                     * CONNECTED
-                     * ==========================================
+                     * ==================================================
+                     * STOMP CONNECTED
+                     * ==================================================
                      */
 
                     if (
@@ -391,8 +438,8 @@ export default function () {
 
 
                         /*
-                         * Log negotiated STOMP version without
-                         * exposing authentication information.
+                         * Log negotiated STOMP version only.
+                         * Never log authentication headers.
                          */
 
                         if (
@@ -407,9 +454,9 @@ export default function () {
 
 
                         /*
-                         * ======================================
+                         * ==================================================
                          * SUBSCRIBE
-                         * ======================================
+                         * ==================================================
                          */
 
                         const subscribeFrame =
@@ -426,7 +473,6 @@ export default function () {
                                 }
                             );
 
-
                         sendStompFrame(
                             socket,
                             subscribeFrame,
@@ -435,9 +481,9 @@ export default function () {
 
 
                         /*
-                         * ======================================
-                         * First chat message
-                         * ======================================
+                         * ==================================================
+                         * First Chat Message
+                         * ==================================================
                          */
 
                         const chatMessage =
@@ -453,7 +499,6 @@ export default function () {
                                 chatMessage
                             );
 
-
                         const sendFrame =
                             buildStompFrame(
                                 'SEND',
@@ -467,7 +512,6 @@ export default function () {
                                 messageBody
                             );
 
-
                         sendStompFrame(
                             socket,
                             sendFrame,
@@ -480,15 +524,23 @@ export default function () {
 
 
                         /*
-                         * ======================================
-                         * Periodic messages
-                         * ======================================
+                         * ==================================================
+                         * Periodic Messages
+                         * ==================================================
                          */
 
                         socket.setInterval(
                             function () {
 
-                                if (!stompConnected) {
+                                /*
+                                 * Do not send anything after
+                                 * intentional shutdown begins.
+                                 */
+                                if (
+                                    !stompConnected ||
+                                    shuttingDown ||
+                                    connectionClosed
+                                ) {
                                     return;
                                 }
 
@@ -505,7 +557,6 @@ export default function () {
                                         message
                                     );
 
-
                                 const frame =
                                     buildStompFrame(
                                         'SEND',
@@ -518,7 +569,6 @@ export default function () {
                                         },
                                         body
                                     );
-
 
                                 sendStompFrame(
                                     socket,
@@ -536,21 +586,42 @@ export default function () {
 
 
                         /*
-                         * ======================================
-                         * Connection timeout
-                         * ======================================
+                         * ==================================================
+                         * Connection Timeout
+                         * ==================================================
                          */
 
                         socket.setTimeout(
                             function () {
 
-                                if (connectionClosed) {
+                                /*
+                                 * Prevent duplicate shutdown.
+                                 */
+                                if (
+                                    shuttingDown ||
+                                    connectionClosed
+                                ) {
                                     return;
                                 }
 
                                 console.log(
                                     `[VU ${__VU}] Connection duration reached.`
                                 );
+
+
+                                /*
+                                 * ------------------------------------------------
+                                 * Begin intentional shutdown.
+                                 * ------------------------------------------------
+                                 *
+                                 * Set this BEFORE DISCONNECT so that:
+                                 *
+                                 * 1. Periodic SEND stops.
+                                 * 2. Expected STOMP ERROR from a closing
+                                 *    session is ignored.
+                                 */
+
+                                shuttingDown = true;
 
 
                                 /*
@@ -563,7 +634,6 @@ export default function () {
                                         {}
                                     );
 
-
                                 sendStompFrame(
                                     socket,
                                     disconnectFrame,
@@ -574,6 +644,8 @@ export default function () {
                                 /*
                                  * Give the DISCONNECT frame a small
                                  * amount of time to leave the socket.
+                                 *
+                                 * Then force-close the WebSocket.
                                  */
 
                                 socket.setTimeout(
@@ -594,9 +666,9 @@ export default function () {
 
 
                     /*
-                     * ==========================================
-                     * MESSAGE
-                     * ==========================================
+                     * ==================================================
+                     * STOMP MESSAGE
+                     * ==================================================
                      */
 
                     else if (
@@ -607,7 +679,6 @@ export default function () {
 
                         const body =
                             stompFrame.body;
-
 
                         try {
 
@@ -628,7 +699,6 @@ export default function () {
                                 const sentTimestamp =
                                     parsedBody.timestamp;
 
-
                                 if (sentTimestamp) {
 
                                     const sentTime =
@@ -638,10 +708,8 @@ export default function () {
                                                 sentTimestamp
                                             ).getTime();
 
-
                                     const latency =
                                         Date.now() - sentTime;
-
 
                                     if (latency >= 0) {
 
@@ -649,13 +717,17 @@ export default function () {
                                             latency
                                         );
 
-
                                         console.log(
                                             `[VU ${__VU}] Message latency: ${latency} ms`
                                         );
                                     }
                                 }
 
+
+                                /*
+                                 * Verify that the received message
+                                 * belongs to this test iteration.
+                                 */
 
                                 check(
                                     parsedBody,
@@ -680,14 +752,38 @@ export default function () {
 
 
                     /*
-                     * ==========================================
+                     * ==================================================
                      * STOMP ERROR
-                     * ==========================================
+                     * ==================================================
                      */
 
                     else if (
                         stompFrame.command === 'ERROR'
                     ) {
+
+                        /*
+                         * During intentional shutdown,
+                         * Spring may send:
+                         *
+                         *     message: Session closed.
+                         *
+                         * This is expected and should NOT
+                         * count as a STOMP connection failure.
+                         */
+
+                        if (shuttingDown) {
+
+                            console.log(
+                                `[VU ${__VU}] STOMP session closed during intentional shutdown.`
+                            );
+
+                            return;
+                        }
+
+
+                        /*
+                         * Unexpected STOMP ERROR.
+                         */
 
                         console.error(
                             `[VU ${__VU}] STOMP ERROR received.`
@@ -695,8 +791,9 @@ export default function () {
 
 
                         /*
-                         * Safe diagnostic logging:
-                         * do NOT print Authorization headers.
+                         * Safe diagnostic logging.
+                         *
+                         * Do NOT print Authorization headers.
                          */
 
                         console.error(
@@ -705,10 +802,14 @@ export default function () {
                             )}`
                         );
 
-
                         console.error(
                             `[VU ${__VU}] STOMP ERROR body: ${stompFrame.body || ''}`
                         );
+
+
+                        /*
+                         * Count only unexpected STOMP errors.
+                         */
 
                         stompConnectionFailures.add(1);
 
@@ -727,6 +828,15 @@ export default function () {
             socket.on(
                 'error',
                 function (error) {
+
+                    /*
+                     * Ignore errors caused by
+                     * intentional shutdown.
+                     */
+
+                    if (shuttingDown) {
+                        return;
+                    }
 
                     console.error(
                         `[VU ${__VU}] WebSocket error: ${error}`
@@ -752,11 +862,9 @@ export default function () {
                     const duration =
                         Date.now() - startTime;
 
-
                     wsConnectionDuration.add(
                         duration
                     );
-
 
                     console.log(
                         `[VU ${__VU}] WebSocket closed.`
@@ -775,6 +883,12 @@ export default function () {
                     );
 
 
+                    /*
+                     * If the WebSocket closed before
+                     * STOMP CONNECTED was received,
+                     * treat it as a STOMP connection failure.
+                     */
+
                     if (!stompConnected) {
 
                         console.error(
@@ -790,9 +904,9 @@ export default function () {
 
 
     /*
-     * ========================================================
+     * ============================================================
      * WebSocket Handshake Validation
-     * ========================================================
+     * ============================================================
      */
 
     const handshakeSuccessful =
@@ -811,6 +925,12 @@ export default function () {
     );
 
 
+    /*
+     * ============================================================
+     * Handshake Failure Diagnostics
+     * ============================================================
+     */
+
     if (!handshakeSuccessful) {
 
         wsHandshakeFailures.add(1);
@@ -828,7 +948,7 @@ export default function () {
 
 
             /*
-             * Print the server response body when available.
+             * Print response body when available.
              */
 
             if (response.body) {
@@ -840,8 +960,9 @@ export default function () {
 
 
             /*
-             * Print response headers, but never print an
-             * Authorization value if one is ever returned.
+             * Print response headers.
+             *
+             * Never print Authorization.
              */
 
             if (response.headers) {
@@ -860,7 +981,6 @@ export default function () {
                         response.headers[key];
                 }
 
-
                 console.error(
                     `[VU ${__VU}] Handshake response headers: ${JSON.stringify(safeHeaders)}`
                 );
@@ -875,8 +995,8 @@ export default function () {
 
 
         /*
-         * The server should normally return the negotiated
-         * STOMP protocol here.
+         * The server should normally return
+         * the negotiated STOMP protocol here.
          */
 
         if (
@@ -895,11 +1015,10 @@ export default function () {
             );
         }
     }
-
-
     /*
-     * Small pause between iterations.
+     * ============================================================
+     * Small Pause Between Iterations
+     * ============================================================
      */
-
     sleep(0.1);
 }
