@@ -53,4 +53,13 @@ public class ChatMessageRequestDTO {
 
     /** Size of the file in bytes */
     private Long fileSizeBytes;
+
+    /**
+     * Optional correlation ID passed through from the client.
+     * <p>
+     * Not persisted to the database. Returned in the response DTO
+     * so that load-testing clients (k6) can correlate sent messages
+     * with received echoes for round-trip latency measurement.
+     */
+    private String loadTestId;
 }

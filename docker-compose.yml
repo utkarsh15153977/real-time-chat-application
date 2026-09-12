@@ -139,7 +139,7 @@ services:
     container_name: blink-message-service
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "8083:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/blink_db

@@ -356,7 +356,7 @@ public class MessageServiceImpl implements MessageService {
                 saved.getMsgId(), messageType,
                 saved.getSenderId(), saved.getReceiverId());
 
-        return mapToResponseDTO(saved);
+        return mapToResponseDTO(saved, requestDTO.getLoadTestId());
     }
 
     /**
@@ -439,6 +439,10 @@ public class MessageServiceImpl implements MessageService {
      * @return the response DTO
      */
     private ChatMessageResponseDTO mapToResponseDTO(Message message) {
+        return mapToResponseDTO(message, null);
+    }
+
+    private ChatMessageResponseDTO mapToResponseDTO(Message message, String loadTestId) {
         return ChatMessageResponseDTO.builder()
                 .messageId(String.valueOf(message.getMsgId()))
                 .senderId(message.getSenderId())
@@ -454,6 +458,7 @@ public class MessageServiceImpl implements MessageService {
                 .timestamp(message.getTimestamp() != null
                         ? message.getTimestamp().toInstant(java.time.ZoneOffset.UTC)
                         : Instant.now())
+                .loadTestId(loadTestId)
                 .build();
     }
 

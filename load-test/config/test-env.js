@@ -61,11 +61,11 @@ export const ENV = {
     // -------------------------------------------------------------------------
 
     HTTP_BASE_URL: normalizeBaseUrl(
-        __ENV.HTTP_BASE_URL || 'http://localhost:8080'
+        __ENV.HTTP_BASE_URL || 'http://localhost:8081'
     ),
 
     WS_BASE_URL: normalizeBaseUrl(
-        __ENV.WS_BASE_URL || 'ws://localhost:8080'
+        __ENV.WS_BASE_URL || 'ws://localhost:8083'
     ),
 
     // -------------------------------------------------------------------------
@@ -183,6 +183,9 @@ export function buildStompFrame(
 
 /**
  * Generates a unique message payload for a VU.
+ *
+ * Field names match ChatMessageRequestDTO exactly:
+ *   senderId, recipientId, chatRoomId, content, messageType, loadTestId
  */
 export function generateChatMessage(vuId) {
     const timestamp = Date.now();
@@ -192,10 +195,16 @@ export function generateChatMessage(vuId) {
             .toString(36)
             .slice(2, 10)}`;
 
+    const senderId = String(vuId);
+    const recipientId = String(vuId + 1000);
+    const chatRoomId = `${senderId}-${recipientId}`;
+
     return {
-        sender: `vu-user-${vuId}`,
+        senderId,
+        recipientId,
+        chatRoomId,
         content: `Load test message ${loadTestId}`,
-        timestamp,
+        messageType: 'TEXT',
         loadTestId,
     };
 }

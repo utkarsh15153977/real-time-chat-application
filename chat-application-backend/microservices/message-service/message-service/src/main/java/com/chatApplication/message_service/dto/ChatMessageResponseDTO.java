@@ -56,4 +56,13 @@ public class ChatMessageResponseDTO {
 
     /** Server-side timestamp when the message was created (epoch seconds) */
     private Instant timestamp;
+
+    /**
+     * Optional correlation ID passed through from the client.
+     * <p>
+     * Not persisted to the database. Returned in the response so that
+     * load-testing clients (k6) can correlate sent messages with received
+     * echoes for round-trip latency measurement.
+     */
+    private String loadTestId;
 }

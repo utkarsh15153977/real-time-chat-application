@@ -15,6 +15,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
@@ -23,9 +24,13 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.security.Principal;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * STOMP WebSocket channel interceptor for JWT authentication.
@@ -63,6 +68,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private final StringRedisTemplate redisTemplate;
     private final WebSocketSessionExpiryManager expiryManager;
+    private final ConcurrentHashMap<String, Principal> sessionPrincipals =
+            new ConcurrentHashMap<>();
 
     public WebSocketAuthInterceptor(
             StringRedisTemplate redisTemplate,
@@ -106,12 +113,47 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             );
 
             authenticateConnectFrame(accessor);
+
+            // Cache the Principal so subsequent frames can use it
+            Principal user = accessor.getUser();
+            if (user != null && accessor.getSessionId() != null) {
+                sessionPrincipals.put(accessor.getSessionId(), user);
+                log.info("Cached Principal for session {}: userId={}",
+                        accessor.getSessionId(), user.getName());
+            } else {
+                log.warn("CONNECT: user={}, sessionId={}",
+                        user, accessor.getSessionId());
+            }
+
+            // Return original message for CONNECT frame
+            // StompSubProtocolHandler.handleConnect() will read
+            // from the header accessor directly
+            return message;
         }
 
-        return MessageBuilder.createMessage(
-                message.getPayload(),
-                accessor.getMessageHeaders()
-        );
+        // Non-CONNECT frames: propagate cached Principal into message
+        // headers so @MessageMapping methods receive it via the
+        // Principal parameter.
+        if (accessor.getSessionId() != null) {
+            Principal user = sessionPrincipals.get(accessor.getSessionId());
+            log.debug("SEND frame: sessionId={}, cachedUser={}, headers={}",
+                    accessor.getSessionId(),
+                    user != null ? user.getName() : "null",
+                    message.getHeaders().keySet());
+            if (user != null) {
+                Map<String, Object> headerMap =
+                        new LinkedHashMap<>(message.getHeaders());
+                headerMap.put(
+                        SimpMessageHeaderAccessor.USER_HEADER,
+                        user);
+                return new org.springframework.messaging.support.GenericMessage<>(
+                        message.getPayload(),
+                        headerMap
+                );
+            }
+        }
+
+        return message;
     }
 
     /**

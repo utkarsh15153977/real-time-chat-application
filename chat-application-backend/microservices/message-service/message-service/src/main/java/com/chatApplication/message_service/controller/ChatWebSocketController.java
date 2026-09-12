@@ -72,10 +72,11 @@ public class ChatWebSocketController {
 
         requestDTO.setSenderId(senderId);
 
-        log.info("WebSocket message: sender={}, type={}, room={}",
+        log.info("WebSocket message: sender={}, type={}, room={}, loadTestId={}",
                 senderId,
                 requestDTO.getMessageType(),
-                requestDTO.getChatRoomId());
+                requestDTO.getChatRoomId(),
+                requestDTO.getLoadTestId());
 
         try {
             // 1. Persist the message to PostgreSQL
@@ -85,6 +86,9 @@ public class ChatWebSocketController {
             // 2. Broadcast to all subscribers in the chat room
             String roomTopic = "/topic/room." + requestDTO.getChatRoomId();
             messagingTemplate.convertAndSend(roomTopic, responseDTO);
+
+            // 2b. Also broadcast to /topic/public for load-testing subscribers
+            messagingTemplate.convertAndSend("/topic/public", responseDTO);
 
             // 3. Send to recipient's personal queue for direct delivery
             messagingTemplate.convertAndSendToUser(
@@ -105,9 +109,10 @@ public class ChatWebSocketController {
                     requestDTO.getContent(),
                     requestDTO.getChatRoomId());
 
-            log.info("Message broadcast: id={}, room={}",
+            log.info("Message broadcast: id={}, room={}, responseLoadTestId={}",
                     responseDTO.getMessageId(),
-                    requestDTO.getChatRoomId());
+                    requestDTO.getChatRoomId(),
+                    responseDTO.getLoadTestId());
 
         } catch (MessageValidationException e) {
             log.warn("Message validation failed: {}", e.getMessage());
