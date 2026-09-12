@@ -1,166 +1,166 @@
-2026-09-11 07:28:21.411
+2026-09-12 10:41:17.884
                 [background-preinit]
                 INFO 
                 o.h.validator.internal.util.Version
                 -
                 HV000001: Hibernate Validator 8.0.2.Final
-2026-09-11 07:28:21.538
+2026-09-12 10:41:18.018
                 [main]
                 INFO 
                 c.c.a.AuthServiceApplication
                 -
-                Starting AuthServiceApplication using Java 17.0.18 with PID 13868 (F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\auth-service\auth-service\target\classes started by LENOVO in F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\auth-service\auth-service)
-2026-09-11 07:28:21.542
+                Starting AuthServiceApplication using Java 17.0.18 with PID 13160 (F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\auth-service\auth-service\target\classes started by LENOVO in F:\Projects\Real-time-Chat-Application\chat-application-backend\microservices\auth-service\auth-service)
+2026-09-12 10:41:18.019
                 [main]
                 DEBUG
                 c.c.a.AuthServiceApplication
                 -
                 Running with Spring Boot v3.5.0, Spring v6.2.7
-2026-09-11 07:28:21.544
+2026-09-12 10:41:18.022
                 [main]
                 INFO 
                 c.c.a.AuthServiceApplication
                 -
                 No active profile set, falling back to 1 default profile: "default"
-2026-09-11 07:28:23.755
+2026-09-12 10:41:20.110
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationDelegate
                 -
                 Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-11 07:28:23.764
+2026-09-12 10:41:20.113
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationDelegate
                 -
                 Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-09-11 07:28:24.278
+2026-09-12 10:41:20.468
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationDelegate
                 -
-                Finished Spring Data repository scanning in 482 ms. Found 3 JPA repository interfaces.
-2026-09-11 07:28:24.322
+                Finished Spring Data repository scanning in 337 ms. Found 3 JPA repository interfaces.
+2026-09-12 10:41:20.501
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationDelegate
                 -
                 Multiple Spring Data modules found, entering strict repository configuration mode
-2026-09-11 07:28:24.326
+2026-09-12 10:41:20.506
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationDelegate
                 -
                 Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-09-11 07:28:24.372
+2026-09-12 10:41:20.544
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationExtensionSupport
                 -
                 Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.chatapp.auth_service.repository.BlacklistedTokenRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-09-11 07:28:24.372
+2026-09-12 10:41:20.546
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationExtensionSupport
                 -
                 Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.chatapp.auth_service.repository.OtpRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-09-11 07:28:24.372
+2026-09-12 10:41:20.547
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationExtensionSupport
                 -
                 Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.chatapp.auth_service.repository.UserRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
-2026-09-11 07:28:24.372
+2026-09-12 10:41:20.547
                 [main]
                 INFO 
                 o.s.d.r.c.RepositoryConfigurationDelegate
                 -
-                Finished Spring Data repository scanning in 18 ms. Found 0 Redis repository interfaces.
-2026-09-11 07:28:25.058
+                Finished Spring Data repository scanning in 15 ms. Found 0 Redis repository interfaces.
+2026-09-12 10:41:21.188
                 [main]
                 INFO 
                 o.s.cloud.context.scope.GenericScope
                 -
                 BeanFactory id=7de85692-2c8c-342a-b769-429bded8d2b5
-2026-09-11 07:28:25.833
+2026-09-12 10:41:22.021
                 [main]
                 INFO 
                 o.s.b.w.e.tomcat.TomcatWebServer
                 -
                 Tomcat initialized with port 8089 (http)
-2026-09-11 07:28:25.862
+2026-09-12 10:41:22.044
                 [main]
                 INFO 
                 o.a.coyote.http11.Http11NioProtocol
                 -
                 Initializing ProtocolHandler ["http-nio-8089"]
-2026-09-11 07:28:25.866
+2026-09-12 10:41:22.048
                 [main]
                 INFO 
                 o.a.catalina.core.StandardService
                 -
                 Starting service [Tomcat]
-2026-09-11 07:28:25.866
+2026-09-12 10:41:22.049
                 [main]
                 INFO 
                 o.a.catalina.core.StandardEngine
                 -
                 Starting Servlet engine: [Apache Tomcat/10.1.41]
-2026-09-11 07:28:26.012
+2026-09-12 10:41:22.197
                 [main]
                 INFO 
                 o.a.c.c.C.[Tomcat].[localhost].[/]
                 -
                 Initializing Spring embedded WebApplicationContext
-2026-09-11 07:28:26.016
+2026-09-12 10:41:22.198
                 [main]
                 INFO 
                 o.s.b.w.s.c.ServletWebServerApplicationContext
                 -
-                Root WebApplicationContext: initialization completed in 4391 ms
-2026-09-11 07:28:26.495
+                Root WebApplicationContext: initialization completed in 4095 ms
+2026-09-12 10:41:22.653
                 [main]
                 INFO 
                 o.h.jpa.internal.util.LogHelper
                 -
                 HHH000204: Processing PersistenceUnitInfo [name: default]
-2026-09-11 07:28:26.612
+2026-09-12 10:41:22.776
                 [main]
                 INFO 
                 org.hibernate.Version
                 -
                 HHH000412: Hibernate ORM core version 6.6.15.Final
-2026-09-11 07:28:26.686
+2026-09-12 10:41:22.853
                 [main]
                 INFO 
                 o.h.c.i.RegionFactoryInitiator
                 -
                 HHH000026: Second-level cache disabled
-2026-09-11 07:28:27.192
+2026-09-12 10:41:23.438
                 [main]
                 INFO 
                 o.s.o.j.p.SpringPersistenceUnitInfo
                 -
                 No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-09-11 07:28:27.254
+2026-09-12 10:41:23.501
                 [main]
                 INFO 
                 com.zaxxer.hikari.HikariDataSource
                 -
                 HikariPool-1 - Starting...
-2026-09-11 07:28:27.502
+2026-09-12 10:41:23.844
                 [main]
                 INFO 
                 com.zaxxer.hikari.pool.HikariPool
                 -
-                HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@480994d3
-2026-09-11 07:28:27.507
+                HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@125124ea
+2026-09-12 10:41:23.849
                 [main]
                 INFO 
                 com.zaxxer.hikari.HikariDataSource
                 -
                 HikariPool-1 - Start completed.
-2026-09-11 07:28:27.674
+2026-09-12 10:41:24.118
                 [main]
                 INFO 
                 o.hibernate.orm.connections.pooling
@@ -173,535 +173,865 @@
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2026-09-11 07:28:29.317
+2026-09-12 10:41:25.994
                 [main]
                 INFO 
                 o.h.e.t.j.p.i.JtaPlatformInitiator
                 -
                 HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2026-09-11 07:28:29.542
+2026-09-12 10:41:26.307
                 [main]
                 INFO 
                 o.s.o.j.LocalContainerEntityManagerFactoryBean
                 -
                 Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-09-11 07:28:30.082
+2026-09-12 10:41:26.874
                 [main]
                 DEBUG
                 c.c.a.s.JwtAuthenticationFilter
                 -
                 Filter 'jwtAuthenticationFilter' configured for use
-2026-09-11 07:28:30.940
+2026-09-12 10:41:27.857
                 [main]
                 DEBUG
                 o.s.s.c.a.a.c.AuthenticationConfiguration$DefaultPasswordEncoderAuthenticationManagerBuilder
                 -
                 No authenticationProviders and no parentAuthenticationManager defined. Returning null.
-2026-09-11 07:28:31.769
+2026-09-12 10:41:28.741
                 [main]
                 INFO 
                 o.s.b.a.e.web.EndpointLinksResolver
                 -
                 Exposing 1 endpoint beneath base path '/actuator'
-2026-09-11 07:28:31.870
+2026-09-12 10:41:28.874
                 [main]
                 DEBUG
                 o.s.s.web.DefaultSecurityFilterChain
                 -
                 Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, CorsFilter, LogoutFilter, JwtAuthenticationFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
-2026-09-11 07:28:32.907
+2026-09-12 10:41:30.264
                 [main]
                 INFO 
                 o.s.c.n.e.c.DiscoveryClientOptionalArgsConfiguration
                 -
                 Eureka HTTP Client uses RestTemplate.
-2026-09-11 07:28:33.139
+2026-09-12 10:41:30.570
                 [main]
                 INFO 
                 o.s.c.n.eureka.InstanceInfoFactory
                 -
                 Setting initial instance status as: STARTING
-2026-09-11 07:28:33.191
+2026-09-12 10:41:30.642
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Initializing Eureka in region us-east-1
-2026-09-11 07:28:33.197
+2026-09-12 10:41:30.652
                 [main]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 07:28:33.215
+2026-09-12 10:41:30.681
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Disable delta property : false
-2026-09-11 07:28:33.215
+2026-09-12 10:41:30.681
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Single vip registry refresh property : null
-2026-09-11 07:28:33.216
+2026-09-12 10:41:30.682
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Force full registry fetch : false
-2026-09-11 07:28:33.216
+2026-09-12 10:41:30.682
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Application is null : false
-2026-09-11 07:28:33.216
+2026-09-12 10:41:30.682
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Registered Applications size is zero : true
-2026-09-11 07:28:33.216
+2026-09-12 10:41:30.683
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Application version is -1: true
-2026-09-11 07:28:33.216
+2026-09-12 10:41:30.683
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Getting all instance registry info from the eureka server
-2026-09-11 07:28:33.922
+2026-09-12 10:41:31.567
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 The response status is 200
-2026-09-11 07:28:33.927
+2026-09-12 10:41:31.570
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 Starting heartbeat executor: renew interval is: 30
-2026-09-11 07:28:33.930
+2026-09-12 10:41:31.574
                 [main]
                 INFO 
                 c.n.discovery.InstanceInfoReplicator
                 -
                 InstanceInfoReplicator onDemand update allowed rate per min is 4
-2026-09-11 07:28:33.933
+2026-09-12 10:41:31.578
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
-                Discovery Client initialized at timestamp 1789111713931 with initial instances count: 1
-2026-09-11 07:28:33.940
+                Discovery Client initialized at timestamp 1789209691576 with initial instances count: 1
+2026-09-12 10:41:31.585
                 [main]
                 INFO 
                 o.s.c.n.e.s.EurekaServiceRegistry
                 -
                 Registering application AUTH-SERVICE with eureka with status UP
-2026-09-11 07:28:33.942
+2026-09-12 10:41:31.585
                 [main]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
-                Saw local status change event StatusChangeEvent [timestamp=1789111713942, current=UP, previous=STARTING]
-2026-09-11 07:28:33.945
+                Saw local status change event StatusChangeEvent [timestamp=1789209691585, current=UP, previous=STARTING]
+2026-09-12 10:41:31.590
                 [main]
                 INFO 
                 o.a.coyote.http11.Http11NioProtocol
                 -
                 Starting ProtocolHandler ["http-nio-8089"]
-2026-09-11 07:28:33.945
+2026-09-12 10:41:31.590
                 [DiscoveryClient-InstanceInfoReplicator-%d]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 DiscoveryClient_AUTH-SERVICE/Utkarsh:auth-service:8089: registering service...
-2026-09-11 07:28:33.982
+2026-09-12 10:41:31.626
                 [main]
                 INFO 
                 o.s.b.w.e.tomcat.TomcatWebServer
                 -
                 Tomcat started on port 8089 (http) with context path '/'
-2026-09-11 07:28:33.985
+2026-09-12 10:41:31.628
                 [main]
                 INFO 
                 o.s.c.n.e.s.EurekaAutoServiceRegistration
                 -
                 Updating port to 8089
-2026-09-11 07:28:34.026
+2026-09-12 10:41:31.680
                 [DiscoveryClient-InstanceInfoReplicator-%d]
                 INFO 
                 c.netflix.discovery.DiscoveryClient
                 -
                 DiscoveryClient_AUTH-SERVICE/Utkarsh:auth-service:8089 - registration status: 204
-2026-09-11 07:28:34.162
+2026-09-12 10:41:31.823
                 [main]
                 INFO 
                 c.c.a.AuthServiceApplication
                 -
-                Started AuthServiceApplication in 13.928 seconds (process running for 14.891)
-2026-09-11 07:33:33.230
+                Started AuthServiceApplication in 15.48 seconds (process running for 16.798)
+2026-09-12 10:44:20.015
+                [http-nio-8089-exec-2]
+                INFO 
+                o.a.c.c.C.[Tomcat].[localhost].[/]
+                -
+                Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-09-12 10:44:20.017
+                [http-nio-8089-exec-2]
+                INFO 
+                o.s.web.servlet.DispatcherServlet
+                -
+                Initializing Servlet 'dispatcherServlet'
+2026-09-12 10:44:20.021
+                [http-nio-8089-exec-2]
+                INFO 
+                o.s.web.servlet.DispatcherServlet
+                -
+                Completed initialization in 4 ms
+2026-09-12 10:44:20.052
+                [http-nio-8089-exec-2]
+                DEBUG
+                o.s.security.web.FilterChainProxy
+                -
+                Securing POST /api/auth/register
+2026-09-12 10:44:20.078
+                [http-nio-8089-exec-2]
+                DEBUG
+                o.s.s.w.a.AnonymousAuthenticationFilter
+                -
+                Set SecurityContextHolder to anonymous SecurityContext
+2026-09-12 10:44:20.088
+                [http-nio-8089-exec-2]
+                DEBUG
+                o.s.security.web.FilterChainProxy
+                -
+                Secured POST /api/auth/register
+2026-09-12 10:44:20.236
+                [http-nio-8089-exec-2]
+                INFO 
+                c.c.a.service.AuthServiceImpl
+                -
+                Attempting to register user with email: singh.utkarsh.developer@gmail.com
+2026-09-12 10:44:20.532
+                [http-nio-8089-exec-2]
+                DEBUG
+                org.hibernate.SQL
+                -
+                select u1_0.id from users u1_0 where u1_0.email=? fetch first ? rows only
+2026-09-12 10:44:20.535
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:VARCHAR) <- [singh.utkarsh.developer@gmail.com]
+2026-09-12 10:44:20.535
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:INTEGER) <- [1]
+2026-09-12 10:44:20.794
+                [http-nio-8089-exec-2]
+                DEBUG
+                org.hibernate.SQL
+                -
+                insert into users (created_at,email,email_verified,last_login,name,online,password,phone,phone_verified,profile_picture,status_message,two_factor_enabled) values (?,?,?,?,?,?,?,?,?,?,?,?)
+2026-09-12 10:44:20.799
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:TIMESTAMP) <- [2026-09-12T10:44:20.747922600]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:VARCHAR) <- [singh.utkarsh.developer@gmail.com]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (3:BOOLEAN) <- [false]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (4:TIMESTAMP) <- [null]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (5:VARCHAR) <- [Utkarsh Singh]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (6:BOOLEAN) <- [false]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (7:VARCHAR) <- [$2a$10$NHn245O22RYW/5WaYCie0eW47wcB/9G7Dfo/E.gE6nwkHcTtr2/9K]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (8:VARCHAR) <- [+914582634875]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (9:BOOLEAN) <- [false]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (10:VARCHAR) <- [null]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (11:VARCHAR) <- [null]
+2026-09-12 10:44:20.802
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (12:BOOLEAN) <- [false]
+2026-09-12 10:44:20.842
+                [http-nio-8089-exec-2]
+                INFO 
+                c.c.a.service.AuthServiceImpl
+                -
+                User created successfully with ID: 7
+2026-09-12 10:44:20.864
+                [http-nio-8089-exec-2]
+                DEBUG
+                org.hibernate.SQL
+                -
+                select o1_0.id,o1_0.created_at,o1_0.expires_at,o1_0.otp,o1_0.purpose,o1_0.used,o1_0.user_id from otps o1_0 where o1_0.user_id=? and o1_0.purpose=?
+2026-09-12 10:44:20.868
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:BIGINT) <- [7]
+2026-09-12 10:44:20.868
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:VARCHAR) <- [REGISTRATION_EMAIL]
+2026-09-12 10:44:20.902
+                [http-nio-8089-exec-2]
+                DEBUG
+                org.hibernate.SQL
+                -
+                insert into otps (created_at,expires_at,otp,purpose,used,user_id) values (?,?,?,?,?,?)
+2026-09-12 10:44:20.904
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:TIMESTAMP) <- [2026-09-12T10:44:20.896808800]
+2026-09-12 10:44:20.904
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:TIMESTAMP) <- [2026-09-12T10:59:20.896808800]
+2026-09-12 10:44:20.904
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (3:VARCHAR) <- [567296]
+2026-09-12 10:44:20.904
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (4:VARCHAR) <- [REGISTRATION_EMAIL]
+2026-09-12 10:44:20.904
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (5:BOOLEAN) <- [false]
+2026-09-12 10:44:20.904
+                [http-nio-8089-exec-2]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (6:BIGINT) <- [7]
+2026-09-12 10:44:20.910
+                [http-nio-8089-exec-2]
+                INFO 
+                c.c.a.service.AuthServiceImpl
+                -
+                Registration OTP generated for user ID: 7
+2026-09-12 10:44:56.963
+                [http-nio-8089-exec-3]
+                DEBUG
+                o.s.security.web.FilterChainProxy
+                -
+                Securing POST /api/auth/verify-registration-otp
+2026-09-12 10:44:56.964
+                [http-nio-8089-exec-3]
+                DEBUG
+                o.s.s.w.a.AnonymousAuthenticationFilter
+                -
+                Set SecurityContextHolder to anonymous SecurityContext
+2026-09-12 10:44:56.964
+                [http-nio-8089-exec-3]
+                DEBUG
+                o.s.security.web.FilterChainProxy
+                -
+                Secured POST /api/auth/verify-registration-otp
+2026-09-12 10:44:56.987
+                [http-nio-8089-exec-3]
+                INFO 
+                c.c.a.service.AuthServiceImpl
+                -
+                Verifying registration email OTP for user ID: 7
+2026-09-12 10:44:57.003
+                [http-nio-8089-exec-3]
+                DEBUG
+                org.hibernate.SQL
+                -
+                select u1_0.id,u1_0.created_at,u1_0.email,u1_0.email_verified,u1_0.last_login,u1_0.name,u1_0.online,u1_0.password,u1_0.phone,u1_0.phone_verified,u1_0.profile_picture,u1_0.status_message,u1_0.two_factor_enabled from users u1_0 where u1_0.id=?
+2026-09-12 10:44:57.009
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:BIGINT) <- [7]
+2026-09-12 10:44:57.020
+                [http-nio-8089-exec-3]
+                DEBUG
+                org.hibernate.SQL
+                -
+                select o1_0.id,o1_0.created_at,o1_0.expires_at,o1_0.otp,o1_0.purpose,o1_0.used,o1_0.user_id from otps o1_0 where o1_0.user_id=? and o1_0.purpose=? order by o1_0.created_at desc fetch first ? rows only
+2026-09-12 10:44:57.020
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:BIGINT) <- [7]
+2026-09-12 10:44:57.020
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:VARCHAR) <- [REGISTRATION_EMAIL]
+2026-09-12 10:44:57.020
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (3:INTEGER) <- [1]
+2026-09-12 10:44:57.034
+                [http-nio-8089-exec-3]
+                INFO 
+                c.c.a.service.AuthServiceImpl
+                -
+                Registration email verification successful for user ID: 7
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                DEBUG
+                org.hibernate.SQL
+                -
+                update users set created_at=?,email=?,email_verified=?,last_login=?,name=?,online=?,password=?,phone=?,phone_verified=?,profile_picture=?,status_message=?,two_factor_enabled=? where id=?
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:TIMESTAMP) <- [2026-09-12T10:44:20.747923]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:VARCHAR) <- [singh.utkarsh.developer@gmail.com]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (3:BOOLEAN) <- [true]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (4:TIMESTAMP) <- [null]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (5:VARCHAR) <- [Utkarsh Singh]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (6:BOOLEAN) <- [false]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (7:VARCHAR) <- [$2a$10$NHn245O22RYW/5WaYCie0eW47wcB/9G7Dfo/E.gE6nwkHcTtr2/9K]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (8:VARCHAR) <- [+914582634875]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (9:BOOLEAN) <- [false]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (10:VARCHAR) <- [null]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (11:VARCHAR) <- [null]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (12:BOOLEAN) <- [false]
+2026-09-12 10:44:57.044
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (13:BIGINT) <- [7]
+2026-09-12 10:44:57.061
+                [http-nio-8089-exec-3]
+                DEBUG
+                org.hibernate.SQL
+                -
+                update otps set created_at=?,expires_at=?,otp=?,purpose=?,used=?,user_id=? where id=?
+2026-09-12 10:44:57.062
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:TIMESTAMP) <- [2026-09-12T10:44:20.896809]
+2026-09-12 10:44:57.063
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:TIMESTAMP) <- [2026-09-12T10:59:20.896809]
+2026-09-12 10:44:57.063
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (3:VARCHAR) <- [567296]
+2026-09-12 10:44:57.063
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (4:VARCHAR) <- [REGISTRATION_EMAIL]
+2026-09-12 10:44:57.063
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (5:BOOLEAN) <- [true]
+2026-09-12 10:44:57.065
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (6:BIGINT) <- [7]
+2026-09-12 10:44:57.065
+                [http-nio-8089-exec-3]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (7:BIGINT) <- [25]
+2026-09-12 10:45:05.634
+                [http-nio-8089-exec-4]
+                DEBUG
+                o.s.security.web.FilterChainProxy
+                -
+                Securing POST /api/auth/login
+2026-09-12 10:45:05.637
+                [http-nio-8089-exec-4]
+                DEBUG
+                o.s.s.w.a.AnonymousAuthenticationFilter
+                -
+                Set SecurityContextHolder to anonymous SecurityContext
+2026-09-12 10:45:05.638
+                [http-nio-8089-exec-4]
+                DEBUG
+                o.s.security.web.FilterChainProxy
+                -
+                Secured POST /api/auth/login
+2026-09-12 10:45:05.645
+                [http-nio-8089-exec-4]
+                INFO 
+                c.c.a.service.AuthServiceImpl
+                -
+                Attempting login for email: singh.utkarsh.developer@gmail.com
+2026-09-12 10:45:05.699
+                [http-nio-8089-exec-4]
+                DEBUG
+                org.hibernate.SQL
+                -
+                select u1_0.id,u1_0.created_at,u1_0.email,u1_0.email_verified,u1_0.last_login,u1_0.name,u1_0.online,u1_0.password,u1_0.phone,u1_0.phone_verified,u1_0.profile_picture,u1_0.status_message,u1_0.two_factor_enabled from users u1_0 where u1_0.email=?
+2026-09-12 10:45:05.701
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:VARCHAR) <- [singh.utkarsh.developer@gmail.com]
+2026-09-12 10:45:05.838
+                [http-nio-8089-exec-4]
+                DEBUG
+                org.hibernate.SQL
+                -
+                select u1_0.id,u1_0.created_at,u1_0.email,u1_0.email_verified,u1_0.last_login,u1_0.name,u1_0.online,u1_0.password,u1_0.phone,u1_0.phone_verified,u1_0.profile_picture,u1_0.status_message,u1_0.two_factor_enabled from users u1_0 where u1_0.id=?
+2026-09-12 10:45:05.838
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:BIGINT) <- [7]
+2026-09-12 10:45:05.838
+                [http-nio-8089-exec-4]
+                DEBUG
+                org.hibernate.SQL
+                -
+                update users set created_at=?,email=?,email_verified=?,last_login=?,name=?,online=?,password=?,phone=?,phone_verified=?,profile_picture=?,status_message=?,two_factor_enabled=? where id=?
+2026-09-12 10:45:05.843
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (1:TIMESTAMP) <- [2026-09-12T10:44:20.747923]
+2026-09-12 10:45:05.843
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (2:VARCHAR) <- [singh.utkarsh.developer@gmail.com]
+2026-09-12 10:45:05.845
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (3:BOOLEAN) <- [true]
+2026-09-12 10:45:05.845
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (4:TIMESTAMP) <- [2026-09-12T10:45:05.835705300]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (5:VARCHAR) <- [Utkarsh Singh]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (6:BOOLEAN) <- [false]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (7:VARCHAR) <- [$2a$10$NHn245O22RYW/5WaYCie0eW47wcB/9G7Dfo/E.gE6nwkHcTtr2/9K]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (8:VARCHAR) <- [+914582634875]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (9:BOOLEAN) <- [false]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (10:VARCHAR) <- [null]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (11:VARCHAR) <- [null]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (12:BOOLEAN) <- [false]
+2026-09-12 10:45:05.846
+                [http-nio-8089-exec-4]
+                TRACE
+                org.hibernate.orm.jdbc.bind
+                -
+                binding parameter (13:BIGINT) <- [7]
+2026-09-12 10:45:06.015
+                [http-nio-8089-exec-4]
+                INFO 
+                c.c.a.service.AuthServiceImpl
+                -
+                Login successful for user: singh.utkarsh.developer@gmail.com
+2026-09-12 10:46:30.691
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 07:38:33.240
+2026-09-12 10:51:30.699
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 07:43:33.242
+2026-09-12 10:56:30.706
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 07:48:33.250
+2026-09-12 11:01:30.718
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 07:53:33.266
+2026-09-12 11:06:30.725
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 07:58:33.268
+2026-09-12 11:11:30.739
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:03:33.279
+2026-09-12 11:16:30.745
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:08:33.288
+2026-09-12 11:21:30.760
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:13:33.302
+2026-09-12 11:26:30.763
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:18:33.306
+2026-09-12 11:31:30.766
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:23:33.321
+2026-09-12 11:36:30.778
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:28:33.331
+2026-09-12 11:41:30.782
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:33:33.340
+2026-09-12 11:46:30.783
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:38:33.357
+2026-09-12 11:51:30.785
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:43:33.369
+2026-09-12 11:56:30.796
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:48:33.376
+2026-09-12 12:01:30.803
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:53:33.378
+2026-09-12 12:06:30.818
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 08:58:33.383
+2026-09-12 12:11:30.822
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 09:03:33.386
+2026-09-12 12:16:30.823
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 09:08:33.403
+2026-09-12 12:21:30.836
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 09:13:33.416
+2026-09-12 12:26:30.852
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 09:18:33.432
+2026-09-12 12:31:30.867
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 09:23:33.446
+2026-09-12 12:36:30.871
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver
                 -
                 Resolving eureka endpoints via configuration
-2026-09-11 09:28:33.455
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 09:33:33.461
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 09:38:33.478
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 09:43:33.492
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 09:48:33.494
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 09:53:33.496
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 09:58:33.513
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:03:33.518
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:08:33.533
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:13:33.538
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:18:33.549
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:23:33.566
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:28:33.576
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:33:33.582
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:38:33.584
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:43:33.596
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:48:33.599
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:53:33.606
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 10:58:33.609
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:03:33.621
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:08:33.625
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:13:33.631
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:18:33.647
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:23:33.657
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:28:33.670
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:33:33.678
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:38:33.681
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:43:33.696
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:48:33.706
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:53:33.712
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 11:58:33.720
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 12:03:33.729
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 12:08:33.732
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 12:13:33.735
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 12:18:33.749
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 12:23:33.758
-                [AsyncResolver-bootstrap-executor-%d]
-                INFO 
-                c.n.d.s.r.aws.ConfigClusterResolver
-                -
-                Resolving eureka endpoints via configuration
-2026-09-11 12:28:33.772
+2026-09-12 12:41:30.874
                 [AsyncResolver-bootstrap-executor-%d]
                 INFO 
                 c.n.d.s.r.aws.ConfigClusterResolver

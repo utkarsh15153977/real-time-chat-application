@@ -1,0 +1,641 @@
+time="2026-09-12T17:32:34+05:30" level=info source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] Starting WebSocket test" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] Iteration: 0" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] Iteration ID: 8-0-1789214554491" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] WebSocket opened." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] JWT configured: true" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 8] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:34+05:30" level=info source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] Starting WebSocket test" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] Iteration: 0" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] Iteration ID: 4-0-1789214554785" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] WebSocket opened." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] JWT configured: true" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:34+05:30" level=info msg="[VU 4] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:35+05:30" level=info source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] Starting WebSocket test" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] Iteration: 0" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] Iteration ID: 5-0-1789214555078" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] WebSocket opened." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] JWT configured: true" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 5] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:35+05:30" level=info source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] Starting WebSocket test" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] Iteration: 0" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] Iteration ID: 3-0-1789214555373" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] WebSocket opened." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] JWT configured: true" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 3] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:35+05:30" level=info source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] Starting WebSocket test" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] Iteration: 0" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] Iteration ID: 6-0-1789214555667" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] WebSocket opened." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] JWT configured: true" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 6] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:35+05:30" level=info source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] Starting WebSocket test" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] Iteration: 0" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] Iteration ID: 2-0-1789214555961" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] WebSocket opened." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] JWT configured: true" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:35+05:30" level=info msg="[VU 2] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] Starting WebSocket test" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] Iteration: 0" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] Iteration ID: 7-0-1789214556256" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] WebSocket opened." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] JWT configured: true" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 7] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] Starting WebSocket test" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] Iteration: 0" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] Iteration ID: 1-0-1789214556550" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] WebSocket opened." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] JWT configured: true" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 1] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] Starting WebSocket test" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] Iteration: 0" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] Iteration ID: 10-0-1789214556846" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] WebSocket opened." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] JWT configured: true" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 10] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:36+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] Starting WebSocket test" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] Iteration: 0" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] Iteration ID: 11-0-1789214557137" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] WebSocket opened." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] JWT configured: true" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 11] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 7] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] Starting WebSocket test" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] Iteration: 0" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] Iteration ID: 13-0-1789214557431" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] WebSocket opened." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] JWT configured: true" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 13] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 1] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] Starting WebSocket test" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] Iteration: 0" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] Iteration ID: 12-0-1789214557726" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] WebSocket opened." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] JWT configured: true" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 12] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 10] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:37+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] Starting WebSocket test" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] Iteration: 0" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] Iteration ID: 15-0-1789214558019" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] WebSocket opened." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] JWT configured: true" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 15] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 11] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 7] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] Starting WebSocket test" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] Iteration: 0" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] Iteration ID: 17-0-1789214558314" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] WebSocket opened." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] JWT configured: true" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 17] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 13] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 1] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] Starting WebSocket test" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] Iteration: 0" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] Iteration ID: 9-0-1789214558608" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] WebSocket opened." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] JWT configured: true" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 9] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 12] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] Starting WebSocket test" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] Iteration: 0" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] Iteration ID: 16-0-1789214558903" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 10] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] WebSocket opened." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] JWT configured: true" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 16] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:38+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 15] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 11] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] Starting WebSocket test" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] Iteration: 0" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] Iteration ID: 19-0-1789214559196" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] WebSocket opened." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] JWT configured: true" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 19] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 7] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 17] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 13] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] Starting WebSocket test" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] Iteration: 0" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] Iteration ID: 18-0-1789214559490" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] WebSocket opened." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] JWT configured: true" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 18] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 1] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 9] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 12] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] Starting WebSocket test" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] Iteration: 0" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] Iteration ID: 14-0-1789214559784" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] WebSocket opened." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] JWT configured: true" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 14] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 10] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 16] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:39+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 15] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] Starting WebSocket test" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] Iteration: 0" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] Iteration ID: 20-0-1789214560079" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] WebSocket opened." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] JWT configured: true" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 20] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 11] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 19] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 7] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 17] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] Starting WebSocket test" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] Iteration: 0" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] Iteration ID: 24-0-1789214560373" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] WebSocket opened." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] JWT configured: true" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 24] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 13] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 18] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 1] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 9] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] Starting WebSocket test" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] Iteration: 0" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] Iteration ID: 22-0-1789214560667" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] WebSocket opened." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] JWT configured: true" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 22] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 12] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 14] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 10] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 16] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] Starting WebSocket test" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] Iteration: 0" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] Iteration ID: 25-0-1789214560961" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] WebSocket opened." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] JWT configured: true" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 25] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:40+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 15] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 20] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 11] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 19] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] Starting WebSocket test" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] Iteration: 0" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] Iteration ID: 23-0-1789214561255" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] WebSocket opened." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] JWT configured: true" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 23] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 7] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 17] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 24] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 13] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 18] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] Starting WebSocket test" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] Iteration: 0" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] Iteration ID: 26-0-1789214561549" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] WebSocket opened." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] JWT configured: true" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 26] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 1] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 9] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 22] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 12] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 14] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] Starting WebSocket test" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] Iteration: 0" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] Iteration ID: 21-0-1789214561843" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] WebSocket opened." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] JWT configured: true" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 21] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 10] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 16] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 25] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:41+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 15] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 20] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] Starting WebSocket test" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] Iteration: 0" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] Iteration ID: 32-0-1789214562138" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] WebSocket opened." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] JWT configured: true" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 32] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 11] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 19] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 23] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 7] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 17] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 24] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] Starting WebSocket test" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] Iteration: 0" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] Iteration ID: 33-0-1789214562431" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] WebSocket opened." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] JWT configured: true" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 33] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 13] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 18] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 26] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 1] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 9] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 22] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] Starting WebSocket test" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] Iteration: 0" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] Iteration ID: 29-0-1789214562726" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] WebSocket opened." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] JWT configured: true" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 29] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 12] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 14] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 21] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 10] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 16] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 25] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:42+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] Starting WebSocket test" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] Iteration: 0" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] Iteration ID: 28-0-1789214563020" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] WebSocket opened." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] JWT configured: true" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 28] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 15] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 20] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 32] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 11] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 19] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 23] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 7] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] Starting WebSocket test" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] Iteration: 0" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] Iteration ID: 27-0-1789214563314" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] WebSocket opened." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] JWT configured: true" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 27] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 17] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 24] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 3] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 33] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 13] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 18] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 8] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 26] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 1] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] Starting WebSocket test" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] Iteration: 0" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] Iteration ID: 34-0-1789214563608" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] WebSocket opened." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] JWT configured: true" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 34] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 9] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 22] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 6] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 29] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 12] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 14] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 4] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 21] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] Starting WebSocket test" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] Iteration: 0" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] Iteration ID: 31-0-1789214563902" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] WebSocket URL: ws://localhost:8083/ws" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="====================================================" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 10] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] WebSocket opened." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] JWT configured: true" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] Sending STOMP CONNECT." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] STOMP command received: CONNECTED" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] STOMP CONNECTED successfully." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] STOMP version: 1.2" source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] Sending STOMP SUBSCRIBE." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 31] Sending STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 16] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 25] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:43+05:30" level=info msg="[VU 2] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:44+05:30" level=info msg="[VU 28] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:44+05:30" level=info msg="[VU 15] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:44+05:30" level=info msg="[VU 20] Sending periodic STOMP SEND." source=console
+time="2026-09-12T17:32:44+05:30" level=info msg="[VU 5] Sending periodic STOMP SEND." source=console

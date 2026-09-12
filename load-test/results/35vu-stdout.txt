@@ -1,0 +1,42 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: F:\Projects\Real-time-Chat-Application\load-test\scenarios\websocket-concurrency.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 35 max VUs, 1m15s max duration (incl. graceful stop):
+              * default: Up to 35 looping VUs for 45s over 3 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+running (0m01.0s), 04/35 VUs, 0 complete and 0 interrupted iterations
+default   [   2% ] 04/35 VUs  01.0s/45.0s
+
+running (0m02.0s), 07/35 VUs, 0 complete and 0 interrupted iterations
+default   [   4% ] 07/35 VUs  02.0s/45.0s
+
+running (0m03.0s), 11/35 VUs, 0 complete and 0 interrupted iterations
+default   [   7% ] 11/35 VUs  03.0s/45.0s
+
+running (0m04.0s), 14/35 VUs, 0 complete and 0 interrupted iterations
+default   [   9% ] 14/35 VUs  04.0s/45.0s
+
+running (0m05.0s), 17/35 VUs, 0 complete and 0 interrupted iterations
+default   [  11% ] 17/35 VUs  05.0s/45.0s
+
+running (0m06.0s), 21/35 VUs, 0 complete and 0 interrupted iterations
+default   [  13% ] 21/35 VUs  06.0s/45.0s
+
+running (0m07.0s), 24/35 VUs, 0 complete and 0 interrupted iterations
+default   [  16% ] 24/35 VUs  07.0s/45.0s
+
+running (0m08.0s), 28/35 VUs, 0 complete and 0 interrupted iterations
+default   [  18% ] 28/35 VUs  08.0s/45.0s
+
+running (0m09.0s), 31/35 VUs, 0 complete and 0 interrupted iterations
+default   [  20% ] 31/35 VUs  09.0s/45.0s
