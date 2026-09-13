@@ -55,6 +55,18 @@ function requireAuthToken() {
     return token;
 }
 
+function requireInternalSecret() {
+    const secret = __ENV.INTERNAL_SECRET;
+
+    if (!secret) {
+        throw new Error(
+            'INTERNAL_SECRET is required. Set it with: $env:INTERNAL_SECRET="your-internal-secret"'
+        );
+    }
+
+    return secret;
+}
+
 export const ENV = {
     // -------------------------------------------------------------------------
     // Base URLs
@@ -73,6 +85,8 @@ export const ENV = {
     // -------------------------------------------------------------------------
 
     AUTH_TOKEN: requireAuthToken(),
+
+    INTERNAL_SECRET: requireInternalSecret(),
 
     // -------------------------------------------------------------------------
     // Endpoint Paths

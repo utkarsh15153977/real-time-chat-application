@@ -329,7 +329,7 @@ export default function () {
     const params = {
         headers: {
             'Sec-WebSocket-Protocol': 'v12.stomp',
-            'X-Internal-Secret': 'super-secret-internal-key-blink-2026',
+            'X-Internal-Secret': ENV.INTERNAL_SECRET,
         },
     };
 

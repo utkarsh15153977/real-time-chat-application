@@ -21,28 +21,56 @@ const WS_URL = getWebSocketUrl();
 
 /*
  * ============================================================
+ * Subscription Synchronization
+ * ============================================================
+ *
+ * Spring STOMP does NOT send a SUBSCRIBED acknowledgement frame.
+ * The server registers subscriptions silently via
+ * DefaultSubscriptionRegistry.registerSubscription().
+ *
+ * Because clientInboundChannel uses an ExecutorSubscribableChannel
+ * (thread pool), SUBSCRIBE and SEND frames are processed
+ * asynchronously. If SEND arrives before SUBSCRIBE registration
+ * completes, SimpleBrokerMessageHandler.findSubscriptions()
+ * returns 0 subscribers and the message is dropped.
+ *
+ * To eliminate this race, we defer the first SEND by
+ * SUBSCRIPTION_SYNC_DELAY_MS milliseconds after sending
+ * the SUBSCRIBE frame. This gives Spring's executor time
+ * to process the SUBSCRIBE before the SEND arrives.
+ *
+ * This is NOT a SUBSTITUTE for a proper server-side
+ * SUBSCRIBE acknowledgement — it is the best client-side
+ * synchronization available when no server ack exists.
+ */
+
+const SUBSCRIPTION_SYNC_DELAY_MS = 100;
+
+
+/*
+ * ============================================================
  * Custom Metrics
  * ============================================================
  */
 
-export const wsHandshakeFailures = new Counter(
-    'ws_handshake_failures'
+export const auditHandshakeFailures = new Counter(
+    'audit_conc_handshake_failures'
 );
 
-export const stompConnectionFailures = new Counter(
-    'stomp_connection_failures'
+export const auditStompConnectionFailures = new Counter(
+    'audit_conc_stomp_connection_failures'
 );
 
-export const wsMessageFailures = new Counter(
-    'ws_message_failures'
+export const auditMessageFailures = new Counter(
+    'audit_conc_message_failures'
 );
 
-export const wsMessagesSent = new Counter(
-    'ws_msgs_sent'
+export const auditMessagesSent = new Counter(
+    'audit_conc_msgs_sent'
 );
 
-export const wsMessagesReceived = new Counter(
-    'ws_msgs_received'
+export const auditMessagesReceived = new Counter(
+    'audit_conc_msgs_received'
 );
 
 export const wsMessageLatency = new Trend(
@@ -53,6 +81,26 @@ export const wsMessageLatency = new Trend(
 export const wsConnectionDuration = new Trend(
     'ws_connection_duration',
     true
+);
+
+export const auditUniqueReceived = new Counter(
+    'audit_conc_unique_received'
+);
+
+export const auditDuplicateDeliveries = new Counter(
+    'audit_conc_duplicate_deliveries'
+);
+
+export const auditMissingDeliveries = new Counter(
+    'audit_conc_missing_deliveries'
+);
+
+export const auditOwnEchoReceived = new Counter(
+    'audit_conc_own_echo_received'
+);
+
+export const auditCrossVUReceived = new Counter(
+    'audit_conc_cross_vu_received'
 );
 
 
@@ -83,15 +131,15 @@ export const options = {
             'rate>0.99',
         ],
 
-        ws_handshake_failures: [
+        audit_conc_handshake_failures: [
             'count==0',
         ],
 
-        stomp_connection_failures: [
+        audit_conc_stomp_connection_failures: [
             'count==0',
         ],
 
-        ws_message_failures: [
+        audit_conc_message_failures: [
             'count==0',
         ],
 
@@ -221,6 +269,103 @@ function parseStompFrame(frame) {
 
 /*
  * ============================================================
+ * handleSummary (audit output)
+ * ============================================================
+ */
+
+export function handleSummary(data) {
+
+    const sent =
+        data.metrics.audit_conc_msgs_sent?.values.count || 0;
+
+    const uniqueReceived =
+        data.metrics.audit_conc_unique_received?.values.count || 0;
+
+    const duplicates =
+        data.metrics.audit_conc_duplicate_deliveries?.values.count || 0;
+
+    const missing =
+        data.metrics.audit_conc_missing_deliveries?.values.count || 0;
+
+    const ownEcho =
+        data.metrics.audit_conc_own_echo_received?.values.count || 0;
+
+    const crossVU =
+        data.metrics.audit_conc_cross_vu_received?.values.count || 0;
+
+    const wsFailures =
+        data.metrics.audit_conc_message_failures?.values.count || 0;
+
+    const stompErrors =
+        data.metrics.audit_conc_stomp_connection_failures?.values.count || 0;
+
+    const handshakeFails =
+        data.metrics.audit_conc_handshake_failures?.values.count || 0;
+
+    const checksPasses =
+        data.metrics.checks?.values.passes || 0;
+
+    const checksFails =
+        data.metrics.checks?.values.fails || 0;
+
+
+    /*
+     * Aggregate audit.
+     *
+     * For a ramping test, we cannot assert exact expected
+     * deliveries. We verify the lower-bound invariants:
+     *   - No duplicates
+     *   - No protocol errors
+     *   - At least some messages received
+     *   - Delivery ratio > 0
+     */
+
+    const aggregateAudit = {
+        totalSent: sent,
+        totalUniqueReceived: uniqueReceived,
+        totalOwnEcho: ownEcho,
+        totalCrossVU: crossVU,
+        totalDuplicates: duplicates,
+        totalMissing: missing,
+        totalProtocolErrors: stompErrors + wsFailures + handshakeFails,
+        deliveryRatio: sent > 0
+            ? (uniqueReceived / sent * 100).toFixed(1) + '%'
+            : 'N/A',
+        checksPasses,
+        checksFails,
+        invariantHolds: {
+            noDuplicates: duplicates === 0,
+            noProtocolErrors:
+                (stompErrors + wsFailures + handshakeFails) === 0,
+            receivedAnything: uniqueReceived > 0,
+            deliveryRatioPositive: uniqueReceived > 0,
+        },
+    };
+
+
+    const allInvariantsHold = Object.values(
+        aggregateAudit.invariantHolds
+    ).every(Boolean);
+
+    aggregateAudit.overallResult =
+        allInvariantsHold ? 'PASS' : 'FAIL';
+
+
+    console.log('');
+    console.log('========================================');
+    console.log('  CONCURRENCY TEST: ACCOUNTING AUDIT');
+    console.log('========================================');
+    console.log(JSON.stringify(aggregateAudit, null, 2));
+    console.log('========================================');
+    console.log('');
+
+
+    return {};
+}
+
+
+/*
+ * ============================================================
  * Main Test
  * ============================================================
  */
@@ -237,6 +382,8 @@ export default function () {
 
     let stompConnected = false;
 
+    let subscriptionReady = false;
+
     let messageSent = false;
 
     /*
@@ -248,6 +395,25 @@ export default function () {
      * True when WebSocket actually closes.
      */
     let connectionClosed = false;
+
+
+    /*
+     * ==========================================================
+     * Per-VU Accounting (LOCAL variables for assertions)
+     * ==========================================================
+     *
+     * These track per-VU state for check() assertions.
+     * k6 Counters are for aggregate reporting only.
+     */
+
+    const receivedSet = new Set();
+
+    let localSentCount = 0;
+    let localDuplicateCount = 0;
+    let localUniqueReceived = 0;
+    let localOwnEcho = 0;
+    let localCrossVU = 0;
+    let localProtocolErrors = 0;
 
 
     /*
@@ -270,6 +436,19 @@ export default function () {
      */
 
     const pendingMessages = {};
+
+
+    /*
+     * ==========================================================
+     * Delivery Matrix
+     * ==========================================================
+     *
+     * Track how many messages this VU received from each
+     * producer VU. Keys are producer VU IDs (as strings)
+     * or "unknown" if the producer cannot be parsed.
+     */
+
+    const receivedByProducer = {};
 
 
     /*
@@ -329,7 +508,7 @@ export default function () {
     const params = {
         headers: {
             'Sec-WebSocket-Protocol': 'v12.stomp',
-            'X-Internal-Secret': 'super-secret-internal-key-blink-2026',
+            'X-Internal-Secret': ENV.INTERNAL_SECRET,
         },
     };
 
@@ -480,82 +659,32 @@ export default function () {
                             'STOMP SUBSCRIBE'
                         );
 
-
-                        /*
-                         * ==================================================
-                         * First Chat Message
-                         * ==================================================
-                         */
-
-                        const chatMessage =
-                            generateChatMessage(__VU);
-
-                        chatMessage.loadTestId =
-                            `${iterationId}-message-1`;
-
-
-                        /*
-                         * Record send time BEFORE sending.
-                         *
-                         * This is the important part for
-                         * accurate round-trip latency.
-                         */
-
-                        const sendTimestamp =
-                            Date.now();
-
-                        pendingMessages[
-                            chatMessage.loadTestId
-                            ] = sendTimestamp;
-
-
-                        const messageBody =
-                            JSON.stringify(
-                                chatMessage
-                            );
-
-
-                        const sendFrame =
-                            buildStompFrame(
-                                'SEND',
-                                {
-                                    destination:
-                                    ENV.ENDPOINTS.SEND_MESSAGE,
-
-                                    'content-type':
-                                        'application/json',
-                                },
-                                messageBody
-                            );
-
-
-                        sendStompFrame(
-                            socket,
-                            sendFrame,
-                            'STOMP SEND'
+                        console.log(
+                            `[VU ${__VU}] SUBSCRIBE sent to ${ENV.ENDPOINTS.TOPIC_PUBLIC}`
                         );
 
-                        wsMessagesSent.add(1);
-
-                        messageSent = true;
-
 
                         /*
                          * ==================================================
-                         * Periodic Messages
+                         * Subscription Synchronization
                          * ==================================================
+                         *
+                         * Defer the first SEND by
+                         * SUBSCRIPTION_SYNC_DELAY_MS to allow
+                         * Spring's clientInboundChannel executor
+                         * to complete SUBSCRIBE registration
+                         * before SEND reaches the broker.
+                         *
+                         * Spring STOMP does not send a SUBSCRIBED
+                         * acknowledgement, so this delay is the
+                         * best client-side synchronization
+                         * available.
                          */
 
-                        socket.setInterval(
+                        socket.setTimeout(
                             function () {
 
-                                /*
-                                 * Never send messages after
-                                 * shutdown begins.
-                                 */
-
                                 if (
-                                    !stompConnected ||
                                     shuttingDown ||
                                     connectionClosed
                                 ) {
@@ -563,38 +692,48 @@ export default function () {
                                 }
 
 
-                                const message =
+                                subscriptionReady = true;
+
+                                console.log(
+                                    `[VU ${__VU}] SUBSCRIPTION READY (after ${SUBSCRIPTION_SYNC_DELAY_MS}ms sync delay)`
+                                );
+
+
+                                /*
+                                 * ==================================================
+                                 * First Chat Message
+                                 * ==================================================
+                                 */
+
+                                const chatMessage =
                                     generateChatMessage(__VU);
 
-
-                                /*
-                                 * Make every message ID
-                                 * unique within this iteration.
-                                 */
-
-                                message.loadTestId =
-                                    `${iterationId}-message-${Date.now()}-${Math.random()
-                                        .toString(36)
-                                        .slice(2, 8)}`;
+                                chatMessage.loadTestId =
+                                    `${iterationId}-message-1`;
 
 
                                 /*
-                                 * Record the exact local
-                                 * send timestamp.
+                                 * Record send time BEFORE sending.
+                                 *
+                                 * This is the important part for
+                                 * accurate round-trip latency.
                                  */
+
+                                const sendTimestamp =
+                                    Date.now();
 
                                 pendingMessages[
-                                    message.loadTestId
-                                    ] = Date.now();
+                                    chatMessage.loadTestId
+                                    ] = sendTimestamp;
 
 
-                                const body =
+                                const messageBody =
                                     JSON.stringify(
-                                        message
+                                        chatMessage
                                     );
 
 
-                                const frame =
+                                const sendFrame =
                                     buildStompFrame(
                                         'SEND',
                                         {
@@ -604,23 +743,116 @@ export default function () {
                                             'content-type':
                                                 'application/json',
                                         },
-                                        body
+                                        messageBody
                                     );
 
 
                                 sendStompFrame(
                                     socket,
-                                    frame,
-                                    'periodic STOMP SEND'
+                                    sendFrame,
+                                    'STOMP SEND (first message)'
                                 );
 
+                                auditMessagesSent.add(1);
 
-                                wsMessagesSent.add(1);
+                                localSentCount++;
 
                                 messageSent = true;
 
+
+                                /*
+                                 * ==================================================
+                                 * Periodic Messages
+                                 * ==================================================
+                                 *
+                                 * Started from within the subscription
+                                 * sync callback so that the interval
+                                 * begins only after the first message
+                                 * has been sent.
+                                 */
+
+                                socket.setInterval(
+                                    function () {
+
+                                        /*
+                                         * Never send messages after
+                                         * shutdown begins.
+                                         */
+
+                                        if (
+                                            !stompConnected ||
+                                            !subscriptionReady ||
+                                            shuttingDown ||
+                                            connectionClosed
+                                        ) {
+                                            return;
+                                        }
+
+
+                                        const message =
+                                            generateChatMessage(__VU);
+
+
+                                        /*
+                                         * Make every message ID
+                                         * unique within this iteration.
+                                         */
+
+                                        message.loadTestId =
+                                            `${iterationId}-message-${Date.now()}-${Math.random()
+                                                .toString(36)
+                                                .slice(2, 8)}`;
+
+
+                                        /*
+                                         * Record the exact local
+                                         * send timestamp.
+                                         */
+
+                                        pendingMessages[
+                                            message.loadTestId
+                                            ] = Date.now();
+
+
+                                        const body =
+                                            JSON.stringify(
+                                                message
+                                            );
+
+
+                                        const frame =
+                                            buildStompFrame(
+                                                'SEND',
+                                                {
+                                                    destination:
+                                                    ENV.ENDPOINTS.SEND_MESSAGE,
+
+                                                    'content-type':
+                                                        'application/json',
+                                                },
+                                                body
+                                            );
+
+
+                                        sendStompFrame(
+                                            socket,
+                                            frame,
+                                            'periodic STOMP SEND'
+                                        );
+
+
+                                        auditMessagesSent.add(1);
+
+                                        localSentCount++;
+
+                                        messageSent = true;
+
+                                    },
+                                    ENV.TEST_PARAMS.MESSAGE_INTERVAL_MS
+                                );
+
                             },
-                            ENV.TEST_PARAMS.MESSAGE_INTERVAL_MS
+                            SUBSCRIPTION_SYNC_DELAY_MS
                         );
 
 
@@ -707,7 +939,7 @@ export default function () {
                         stompFrame.command === 'MESSAGE'
                     ) {
 
-                        wsMessagesReceived.add(1);
+                        auditMessagesReceived.add(1);
 
 
                         const body =
@@ -719,21 +951,6 @@ export default function () {
                             const parsedBody =
                                 JSON.parse(body);
 
-
-                            console.log(
-                                `[VU ${__VU}] MESSAGE body keys: ${Object.keys(parsedBody).join(', ')}`
-                            );
-
-                            console.log(
-                                `[VU ${__VU}] MESSAGE loadTestId: ${parsedBody.loadTestId}`
-                            );
-
-
-                            /*
-                             * ------------------------------------------------
-                             * Validate message structure
-                             * ------------------------------------------------
-                             */
 
                             const receivedLoadTestId =
                                 parsedBody.loadTestId;
@@ -750,17 +967,80 @@ export default function () {
 
 
                             /*
-                             * ------------------------------------------------
-                             * Check whether this message belongs
-                             * to this VU's pending messages.
-                             * ------------------------------------------------
+                             * Duplicate detection (per-VU).
+                             *
+                             * If this VU already received this
+                             * loadTestId, count as duplicate
+                             * and do not double-count.
+                             */
+
+                            if (
+                                receivedSet.has(
+                                    receivedLoadTestId
+                                )
+                            ) {
+
+                                localDuplicateCount++;
+                                auditDuplicateDeliveries.add(1);
+
+                                console.log(
+                                    `[VU ${__VU}] DUPLICATE: ${receivedLoadTestId}`
+                                );
+
+                                return;
+                            }
+
+
+                            /*
+                             * New unique message received.
+                             */
+
+                            receivedSet.add(
+                                receivedLoadTestId
+                            );
+
+                            localUniqueReceived++;
+                            auditUniqueReceived.add(1);
+
+
+                            /*
+                             * Determine own message vs cross-VU.
+                             */
+
+                            const isOwnMessage =
+                                receivedLoadTestId.startsWith(
+                                    `${iterationId}-`
+                                );
+
+
+                            if (isOwnMessage) {
+
+                                localOwnEcho++;
+                                auditOwnEchoReceived.add(1);
+
+                                console.log(
+                                    `[VU ${__VU}] OWN ECHO: ${receivedLoadTestId}`
+                                );
+
+                            } else {
+
+                                localCrossVU++;
+                                auditCrossVUReceived.add(1);
+
+                                console.log(
+                                    `[VU ${__VU}] CROSS-VU: ${receivedLoadTestId}`
+                                );
+                            }
+
+
+                            /*
+                             * Latency calculation for own messages.
                              */
 
                             const sentTimestamp =
                                 pendingMessages[
                                     receivedLoadTestId
                                     ];
-
 
                             if (
                                 sentTimestamp !== undefined
@@ -769,15 +1049,9 @@ export default function () {
                                 const receiveTimestamp =
                                     Date.now();
 
-
                                 const latency =
                                     receiveTimestamp -
                                     sentTimestamp;
-
-
-                                /*
-                                 * Record real round-trip latency.
-                                 */
 
                                 if (latency >= 0) {
 
@@ -785,58 +1059,59 @@ export default function () {
                                         latency
                                     );
 
-
                                     console.log(
-                                        `[VU ${__VU}] Echoed message matched: ${receivedLoadTestId}`
-                                    );
-
-                                    console.log(
-                                        `[VU ${__VU}] WebSocket round-trip latency: ${latency} ms`
+                                        `[VU ${__VU}] Round-trip latency: ${latency} ms`
                                     );
                                 }
-
-
-                                /*
-                                 * Remove the message from
-                                 * pending messages.
-                                 *
-                                 * This prevents duplicate MESSAGE
-                                 * frames from being counted twice.
-                                 */
 
                                 delete pendingMessages[
                                     receivedLoadTestId
                                     ];
-
-
-                                /*
-                                 * Verify the correlation ID.
-                                 */
-
-                                check(
-                                    parsedBody,
-                                    {
-                                        'echoed message has matching loadTestId':
-                                            (msg) =>
-                                                msg.loadTestId ===
-                                                receivedLoadTestId,
-                                    }
-                                );
-
-                            } else {
-
-                                /*
-                                 * Message is valid but was not
-                                 * generated by this VU/iteration.
-                                 *
-                                 * This can happen because the VU
-                                 * subscribed to a shared topic.
-                                 */
-
-                                console.log(
-                                    `[VU ${__VU}] Received message from another test/client.`
-                                );
                             }
+
+
+                            /*
+                             * Delivery matrix update.
+                             */
+
+                            const dashIndex =
+                                receivedLoadTestId.indexOf('-');
+
+                            let producerVu = 'unknown';
+
+                            if (dashIndex > 0) {
+
+                                const candidate =
+                                    receivedLoadTestId.substring(
+                                        0,
+                                        dashIndex
+                                    );
+
+                                if (
+                                    !Number.isNaN(
+                                        Number.parseInt(
+                                            candidate,
+                                            10
+                                        )
+                                    )
+                                ) {
+                                    producerVu = candidate;
+                                }
+                            }
+
+                            if (
+                                !receivedByProducer[
+                                    producerVu
+                                    ]
+                            ) {
+                                receivedByProducer[
+                                    producerVu
+                                    ] = 0;
+                            }
+
+                            receivedByProducer[
+                                producerVu
+                                ]++;
 
 
                         } catch (error) {
@@ -845,7 +1120,8 @@ export default function () {
                                 `[VU ${__VU}] Failed to parse STOMP MESSAGE body: ${error}`
                             );
 
-                            wsMessageFailures.add(1);
+                            auditMessageFailures.add(1);
+                            localProtocolErrors++;
                         }
                     }
 
@@ -901,7 +1177,9 @@ export default function () {
                         );
 
 
-                        stompConnectionFailures.add(1);
+                        auditStompConnectionFailures.add(1);
+
+                        localProtocolErrors++;
 
                         socket.close();
                     }
@@ -931,7 +1209,9 @@ export default function () {
                         `[VU ${__VU}] WebSocket error: ${error}`
                     );
 
-                    wsMessageFailures.add(1);
+                    auditMessageFailures.add(1);
+
+                    localProtocolErrors++;
                 }
             );
 
@@ -975,9 +1255,139 @@ export default function () {
 
 
                     /*
-                     * If WebSocket closes before
-                     * STOMP CONNECTED, count it as failure.
+                     * ==========================================================
+                     * Per-VU Accounting Summary
+                     * ==========================================================
                      */
+
+                    const localMissing =
+                        Math.max(
+                            0,
+                            localSentCount - localUniqueReceived
+                        );
+
+                    console.log(
+                        `[VU ${__VU}] ── ACCOUNTING SUMMARY ──`
+                    );
+
+                    console.log(
+                        `[VU ${__VU}]   sent: ${localSentCount}`
+                    );
+
+                    console.log(
+                        `[VU ${__VU}]   uniqueReceived: ${localUniqueReceived}`
+                    );
+
+                    console.log(
+                        `[VU ${__VU}]   ownEcho: ${localOwnEcho}`
+                    );
+
+                    console.log(
+                        `[VU ${__VU}]   crossVU: ${localCrossVU}`
+                    );
+
+                    console.log(
+                        `[VU ${__VU}]   duplicates: ${localDuplicateCount}`
+                    );
+
+                    console.log(
+                        `[VU ${__VU}]   missing: ${localMissing}`
+                    );
+
+                    console.log(
+                        `[VU ${__VU}]   protocolErrors: ${localProtocolErrors}`
+                    );
+
+
+                    if (localMissing > 0) {
+                        auditMissingDeliveries.add(localMissing);
+                    }
+
+
+                    /*
+                     * ==========================================================
+                     * Delivery Matrix Summary
+                     * ==========================================================
+                     */
+
+                    const producerKeys =
+                        Object.keys(receivedByProducer);
+
+                    if (producerKeys.length > 0) {
+
+                        console.log(
+                            `[VU ${__VU}] ── DELIVERY MATRIX ROW ──`
+                        );
+
+                        let totalReceived = 0;
+
+                        for (
+                            const pVu of producerKeys
+                            ) {
+
+                            const count =
+                                receivedByProducer[pVu];
+
+                            totalReceived += count;
+
+                            console.log(
+                                `[VU ${__VU}]   from VU ${pVu} = ${count}`
+                            );
+                        }
+
+                        console.log(
+                            `[VU ${__VU}]   total received = ${totalReceived}`
+                        );
+
+                    } else {
+
+                        console.log(
+                            `[VU ${__VU}] No messages received during this session.`
+                        );
+                    }
+
+
+                    /*
+                     * ==========================================================
+                     * Per-VU Assertions
+                     * ==========================================================
+                     *
+                     * Uses LOCAL variables only.
+                     *
+                     * Provable lower-bound invariants for ramping test:
+                     *   - Each VU receives at least its own echoed messages
+                     *   - No duplicates
+                     *   - No protocol errors
+                     *   - No unexpected messages
+                     *
+                     * We cannot assert exact delivery counts because VUs
+                     * ramp up over time and may not all be subscribed
+                     * when every message is sent.
+                     */
+
+                    check(
+                        { vu: __VU },
+                        {
+                            'VU received at least its own echoed messages':
+                                (v) =>
+                                    localUniqueReceived >=
+                                    localSentCount,
+
+                            'VU has no duplicate deliveries':
+                                (v) =>
+                                    localDuplicateCount === 0,
+
+                            'VU has no protocol errors':
+                                (v) =>
+                                    localProtocolErrors === 0,
+
+                            'VU has no missing own-echo messages':
+                                (v) =>
+                                    localOwnEcho >=
+                                    localSentCount,
+                        }
+                    );
+
 
                     if (!stompConnected) {
 
@@ -985,7 +1395,9 @@ export default function () {
                             `[VU ${__VU}] STOMP CONNECT failed before CONNECTED response.`
                         );
 
-                        stompConnectionFailures.add(1);
+                        auditStompConnectionFailures.add(1);
+
+                        localProtocolErrors++;
                     }
                 }
             );
@@ -1023,7 +1435,7 @@ export default function () {
 
     if (!handshakeSuccessful) {
 
-        wsHandshakeFailures.add(1);
+        auditHandshakeFailures.add(1);
 
         console.error(
             `[VU ${__VU}] WebSocket handshake failed.`
@@ -1090,13 +1502,10 @@ export default function () {
             );
         }
     }
-
-
     /*
      * ============================================================
      * Small Pause Between Iterations
      * ============================================================
      */
-
     sleep(0.1);
 }
