@@ -70,11 +70,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     /**
-     * Registers security interceptors on the client inbound channel.
+     * Registers interceptors on the client inbound channel.
      * <p>
      * Interceptors execute in order:
-     *   1. InternalSecurityFilter (validates X-Internal-Secret on HTTP upgrade)
-     *   2. WebSocketAuthInterceptor (validates JWT on STOMP CONNECT)
+     *   1. WebSocketAuthInterceptor (validates JWT on STOMP CONNECT)
+     *   2. StompDiagnosticInterceptor (captures SUBSCRIBE/SEND frame timestamps)
+     * <p>
+     * PURPOSE: Investigation only. Diagnostic interceptor is temporary.
      *
      * @param registration the channel registration
      */
@@ -82,5 +84,23 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureClientInboundChannel(
             ChannelRegistration registration) {
         registration.interceptors(webSocketAuthInterceptor);
+        registration.interceptors(
+                new StompDiagnosticInterceptor("INBOUND"));
+    }
+
+    /**
+     * Registers interceptors on the client outbound channel.
+     * <p>
+     * Captures MESSAGE frames dispatched to subscribers.
+     * <p>
+     * PURPOSE: Investigation only. Remove after RCA is complete.
+     *
+     * @param registration the channel registration
+     */
+    @Override
+    public void configureClientOutboundChannel(
+            ChannelRegistration registration) {
+        registration.interceptors(
+                new StompDiagnosticInterceptor("OUTBOUND"));
     }
 }

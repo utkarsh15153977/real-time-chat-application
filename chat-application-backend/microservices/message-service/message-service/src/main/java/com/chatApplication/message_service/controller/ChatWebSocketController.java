@@ -13,6 +13,8 @@ import com.chatApplication.message_service.service.PushNotificationService;
 import com.chatApplication.message_service.service.UserPresenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
@@ -45,6 +47,13 @@ import java.security.Principal;
 @Controller
 @RequiredArgsConstructor
 public class ChatWebSocketController {
+
+    /**
+     * DIAGNOSTIC logger for subscription race investigation.
+     * PURPOSE: Investigation only. Remove after RCA is complete.
+     */
+    private static final Logger diagLog =
+            LoggerFactory.getLogger("STOMP_DIAGNOSTIC");
 
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageService messageService;
@@ -88,7 +97,19 @@ public class ChatWebSocketController {
             messagingTemplate.convertAndSend(roomTopic, responseDTO);
 
             // 2b. Also broadcast to /topic/public for load-testing subscribers
+            // DIAGNOSTIC: Capture timing of convertAndSend for race investigation
+            long publishTs = System.currentTimeMillis();
+            diagLog.info("[CONTROLLER] PUBLISH_START ts={} dest=/topic/public " +
+                            "loadTestId={} sender={} thread={}",
+                    publishTs, responseDTO.getLoadTestId(), senderId,
+                    Thread.currentThread().getName());
             messagingTemplate.convertAndSend("/topic/public", responseDTO);
+            long publishEndTs = System.currentTimeMillis();
+            diagLog.info("[CONTROLLER] PUBLISH_END ts={} dest=/topic/public " +
+                            "loadTestId={} elapsed={}ms thread={}",
+                    publishEndTs, responseDTO.getLoadTestId(),
+                    (publishEndTs - publishTs),
+                    Thread.currentThread().getName());
 
             // 3. Send to recipient's personal queue for direct delivery
             messagingTemplate.convertAndSendToUser(
