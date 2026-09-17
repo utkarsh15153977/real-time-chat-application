@@ -46,18 +46,10 @@ public class StompSubscriptionEventListener {
             userId = accessor.getUser().getName();
         }
 
-        Long subscribeReceivedTs = StompDiagnosticInterceptor
-                .getAndRemoveSubscribeTimestamp(sessionId, subId);
-        String deltaStr = "unknown";
-        if (subscribeReceivedTs != null) {
-            long delta = ts - subscribeReceivedTs;
-            deltaStr = String.valueOf(delta);
-        }
-
         log.info("[BROKER] SUBSCRIPTION_REGISTERED ts={} session={} user={} dest={} subId={} " +
-                        "registrationDeltaMs={} thread={}",
+                        "thread={}",
                 ts, sessionId, userId, destination, subId,
-                deltaStr, threadName);
+                threadName);
     }
 
     @EventListener

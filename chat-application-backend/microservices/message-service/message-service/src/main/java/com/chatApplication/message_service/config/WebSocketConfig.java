@@ -86,7 +86,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      * Interceptors execute in order:
      *   1. WebSocketAuthInterceptor (validates JWT on STOMP CONNECT)
      *   2. SubscriptionReadinessInterceptor (buffers SEND while SUBSCRIBE is pending)
-     *   3. StompDiagnosticInterceptor (captures SUBSCRIBE/SEND frame timestamps)
      * <p>
      * The SubscriptionReadinessInterceptor implements ExecutorChannelInterceptor
      * and must be registered here so that its {@code afterMessageHandled()} callback
@@ -99,24 +98,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             ChannelRegistration registration) {
         registration.interceptors(webSocketAuthInterceptor);
         registration.interceptors(subscriptionReadinessInterceptor);
-        registration.interceptors(
-                new StompDiagnosticInterceptor("INBOUND"));
-    }
-
-    /**
-     * Registers interceptors on the client outbound channel.
-     * <p>
-     * Captures MESSAGE frames dispatched to subscribers.
-     * <p>
-     * PURPOSE: Investigation only. Remove after RCA is complete.
-     *
-     * @param registration the channel registration
-     */
-    @Override
-    public void configureClientOutboundChannel(
-            ChannelRegistration registration) {
-        registration.interceptors(
-                new StompDiagnosticInterceptor("OUTBOUND"));
     }
 
     /**

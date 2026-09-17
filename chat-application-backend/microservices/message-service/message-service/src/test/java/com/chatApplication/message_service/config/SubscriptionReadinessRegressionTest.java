@@ -697,6 +697,598 @@ class SubscriptionReadinessRegressionTest {
     }
 
     // ================================================================
+    // 11. Multiple subscriptions: SEND released only when ALL complete
+    // ================================================================
+
+    @Test
+    @DisplayName("Multiple subscriptions: buffered SENDs released only when all complete")
+    void testMultipleSubscriptions_onlyReleaseWhenAllComplete() throws Exception {
+        String sessionId = UUID.randomUUID().toString();
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> sub1Msg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/A");
+        Message<?> sub2Msg = createSubscribeMessage(
+                sessionId, "sub-2", "/topic/B");
+
+        // Both subscriptions pending
+        interceptor.preSend(sub1Msg, testChannel);
+        interceptor.preSend(sub2Msg, testChannel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // Verify nothing dispatched
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // First subscription completes - SEND should NOT be released
+        interceptor.afterMessageHandled(sub1Msg, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND should NOT be released when first subscription completes")
+                .isEmpty();
+
+        // Register both subscriptions in the real registry
+        registerInRegistry(sessionId, "sub-1", "/topic/A");
+        registerInRegistry(sessionId, "sub-2", "/topic/B");
+
+        // Second subscription completes - NOW SEND should be released
+        interceptor.afterMessageHandled(sub2Msg, testChannel, brokerHandler, null);
+
+        List<Message<?>> dispatched = testChannel.getDispatchedMessages();
+        assertThat(dispatched).hasSize(1);
+        assertThat(dispatched.get(0)).isSameAs(sendMsg);
+
+        // Both subscriptions should be registered
+        Message<?> probeA = createLookupProbe("/topic/A");
+        Message<?> probeB = createLookupProbe("/topic/B");
+        assertThat(subscriptionRegistry.findSubscriptions(probeA)).isNotNull();
+        assertThat(subscriptionRegistry.findSubscriptions(probeB)).isNotNull();
+    }
+
+    // ================================================================
+    // 12. Failed subscription: buffered SENDs discarded
+    // ================================================================
+
+    @Test
+    @DisplayName("Failed subscription: buffered SENDs discarded, not released")
+    void testFailedSubscription_discardsBufferedSends() throws Exception {
+        String sessionId = UUID.randomUUID().toString();
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/public");
+
+        // Subscription pending
+        interceptor.preSend(subMsg, testChannel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // Simulate failed subscription (ex != null)
+        RuntimeException failure = new RuntimeException("broker error");
+        interceptor.afterMessageHandled(subMsg, testChannel, brokerHandler, failure);
+
+        // SEND should be discarded, not released
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND should be discarded when subscription fails")
+                .isEmpty();
+
+        // Pending state should be cleared
+        assertThat(interceptor.hasPendingSubscriptions(sessionId))
+                .as("No pending subscriptions after failure")
+                .isFalse();
+    }
+
+    // ================================================================
+    // 13. One subscription fails, one succeeds: SENDs discarded
+    // ================================================================
+
+    @Test
+    @DisplayName("One subscription fails, one succeeds: buffered SENDs discarded")
+    void testOneFailOneSuccess_discardsBufferedSends() {
+        String sessionId = UUID.randomUUID().toString();
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> sub1Msg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/A");
+        Message<?> sub2Msg = createSubscribeMessage(
+                sessionId, "sub-2", "/topic/B");
+
+        // Both subscriptions pending
+        interceptor.preSend(sub1Msg, testChannel);
+        interceptor.preSend(sub2Msg, testChannel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // First subscription fails
+        interceptor.afterMessageHandled(sub1Msg, testChannel, brokerHandler,
+                new RuntimeException("failed"));
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // Second subscription succeeds - no more pending, but failure occurred
+        interceptor.afterMessageHandled(sub2Msg, testChannel, brokerHandler, null);
+
+        // SENDs should be discarded, not released
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SENDs discarded when any subscription failed")
+                .isEmpty();
+    }
+
+    // ================================================================
+    // 14. Failed subscription does not affect other sessions
+    // ================================================================
+
+    @Test
+    @DisplayName("Failed subscription in session A does not discard session B SENDs")
+    void testFailedSubscription_sessionIsolation() {
+        String sessionA = UUID.randomUUID().toString();
+        String sessionB = UUID.randomUUID().toString();
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        // Session A: subscribe pending
+        Message<?> subA = createSubscribeMessage(sessionA, "sub-a", "/topic/public");
+        interceptor.preSend(subA, testChannel);
+
+        // Session B: subscribe pending
+        Message<?> subB = createSubscribeMessage(sessionB, "sub-b", "/topic/public");
+        interceptor.preSend(subB, testChannel);
+
+        // Buffer SENDs for both
+        Message<?> sendA = createSendMessage(sessionA, "/app/chat.sendMessage");
+        Message<?> sendB = createSendMessage(sessionB, "/app/chat.sendMessage");
+        interceptor.preSend(sendA, testChannel);
+        interceptor.preSend(sendB, testChannel);
+
+        // Session A subscription fails
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler,
+                new RuntimeException("failed"));
+
+        // Session B subscription succeeds - should release B's SEND
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+
+        // Only B's SEND should be dispatched
+        List<Message<?>> dispatched = testChannel.getDispatchedMessages();
+        assertThat(dispatched).hasSize(1);
+        assertThat(dispatched.get(0)).isSameAs(sendB);
+    }
+
+    // ================================================================
+    // 15. removeSession clears failure flag
+    // ================================================================
+
+    @Test
+    @DisplayName("removeSession clears pending, failure, and buffered state")
+    void testRemoveSession_clearsAllState() {
+        String sessionId = UUID.randomUUID().toString();
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/public");
+        interceptor.preSend(subMsg, testChannel);
+
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        interceptor.preSend(sendMsg, testChannel);
+
+        // Set failure flag
+        interceptor.afterMessageHandled(subMsg, testChannel, brokerHandler,
+                new RuntimeException("failed"));
+
+        // Now try to release - should have no effect
+        interceptor.afterMessageHandled(subMsg, testChannel, brokerHandler, null);
+
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // After removeSession, everything should be clean
+        interceptor.removeSession(sessionId);
+        assertThat(interceptor.hasPendingSubscriptions(sessionId)).isFalse();
+    }
+
+    // ================================================================
+    // 16. Duplicate SUBSCRIBE: subscriptionId-based tracking preserves
+    //     independent operations — first completion does NOT release SEND
+    // ================================================================
+
+    @Test
+    @DisplayName("Duplicate SUBSCRIBE: first completion does NOT release buffered SEND when second subscription is still pending")
+    void testDuplicateSubscribe_subscriptionIdTrackingPreservesIndependence() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        // Two SUBSCRIBEs with different subscription IDs to same destination
+        Message<?> sub1 = createSubscribeMessage(sessionId, "sub-1", destination);
+        Message<?> sub2 = createSubscribeMessage(sessionId, "sub-2", destination);
+
+        // Both subscriptions pending
+        interceptor.preSend(sub1, testChannel);
+        interceptor.preSend(sub2, testChannel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createSendMessage(sessionId, destination);
+        assertThat(interceptor.preSend(sendMsg, testChannel))
+                .as("SEND should be buffered")
+                .isNull();
+
+        // Complete first subscription — SEND should NOT be released
+        // because sub-2 is still pending
+        interceptor.afterMessageHandled(sub1, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages())
+                .as("After first subscription completes, SEND should still be buffered " +
+                        "(second subscription still pending)")
+                .isEmpty();
+
+        // Complete second subscription — NOW SEND should be released
+        interceptor.afterMessageHandled(sub2, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages())
+                .as("After both subscriptions complete, SEND should be released")
+                .hasSize(1);
+    }
+
+    // ================================================================
+    // 17. Duplicate SUBSCRIBE: both complete before SEND executes
+    // ================================================================
+
+    @Test
+    @DisplayName("Duplicate SUBSCRIBE: both complete before SEND executes — broker has 2 subscriptions for same destination")
+    void testDuplicateSubscribe_bothCompleteBeforeSend() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> sub1 = createSubscribeMessage(sessionId, "sub-1", destination);
+        Message<?> sub2 = createSubscribeMessage(sessionId, "sub-2", destination);
+
+        // Both subscriptions pending in interceptor
+        interceptor.preSend(sub1, testChannel);
+        interceptor.preSend(sub2, testChannel);
+
+        // Register both in the real registry
+        registerInRegistry(sessionId, "sub-1", destination);
+        registerInRegistry(sessionId, "sub-2", destination);
+
+        // Complete both subscriptions
+        interceptor.afterMessageHandled(sub1, testChannel, brokerHandler, null);
+        interceptor.afterMessageHandled(sub2, testChannel, brokerHandler, null);
+
+        // SEND arrives after both are complete — passes through (no pending)
+        Message<?> sendMsg = createSendMessage(sessionId, destination);
+        interceptor.preSend(sendMsg, testChannel);
+
+        // Check how many subscriptions are registered
+        Message<?> probe = createLookupProbe(destination);
+        var matches = subscriptionRegistry.findSubscriptions(probe);
+
+        // MultiValueMap.size() returns number of sessions (1),
+        // not number of subscription IDs per session.
+        // Count total subscription IDs across all sessions.
+        int totalSubs = 0;
+        if (matches != null) {
+            totalSubs = matches.values().stream()
+                    .mapToInt(List::size).sum();
+        }
+
+        // ASSERTION: Both SUBSCRIBEs registered → broker has 2 subscriptions
+        // for the same destination. This means future messages would be
+        // delivered TWICE to this session (duplicate delivery).
+        assertThat(totalSubs)
+                .as("Broker has 2 subscriptions for same destination " +
+                        "(duplicate SUBSCRIBE creates double registration)")
+                .isEqualTo(2);
+    }
+
+    // ================================================================
+    // 18. Two different destinations: independently tracked
+    // ================================================================
+
+    @Test
+    @DisplayName("Two different destinations: independently tracked and released sequentially")
+    void testTwoDifferentDestinations_independentlyTracked() throws Exception {
+        String sessionId = UUID.randomUUID().toString();
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> sub1Msg = createSubscribeMessage(sessionId, "sub-1", "/topic/A");
+        Message<?> sub2Msg = createSubscribeMessage(sessionId, "sub-2", "/topic/B");
+
+        // Both subscriptions pending
+        interceptor.preSend(sub1Msg, testChannel);
+        interceptor.preSend(sub2Msg, testChannel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // First subscription completes - SEND should NOT be released
+        interceptor.afterMessageHandled(sub1Msg, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // Second subscription completes - NOW SEND should be released
+        interceptor.afterMessageHandled(sub2Msg, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).hasSize(1);
+    }
+
+    // ================================================================
+    // 19. Two subscriptions same destination: A completes before B
+    // ================================================================
+
+    @Test
+    @DisplayName("Same destination, two subscription IDs: A completes before B — SEND stays buffered")
+    void testSameDestination_twoSubIds_aCompletesBeforeB() throws Exception {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", destination);
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", destination);
+
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // A completes first
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND stays buffered while B is still pending")
+                .isEmpty();
+
+        // B completes — now SEND is released
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).hasSize(1);
+    }
+
+    // ================================================================
+    // 20. Two subscriptions same destination: B completes before A
+    // ================================================================
+
+    @Test
+    @DisplayName("Same destination, two subscription IDs: B completes before A — SEND stays buffered")
+    void testSameDestination_twoSubIds_bCompletesBeforeA() throws Exception {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", destination);
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", destination);
+
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // B completes first (out of order)
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND stays buffered while A is still pending")
+                .isEmpty();
+
+        // A completes — now SEND is released
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).hasSize(1);
+    }
+
+    // ================================================================
+    // 21. Duplicate subscription: A succeeds, B fails — SENDs discarded
+    // ================================================================
+
+    @Test
+    @DisplayName("Duplicate subscription: A succeeds, B fails — buffered SENDs discarded")
+    void testDuplicateSubscription_aSucceedsBFails_discardsBufferedSends() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", destination);
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", destination);
+
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // A succeeds
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // B fails — failure flag set, SENDs discarded
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler,
+                new RuntimeException("subscription failed"));
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // Verify no pending state remains
+        assertThat(interceptor.hasPendingSubscriptions(sessionId)).isFalse();
+    }
+
+    // ================================================================
+    // 22. Duplicate subscription: A fails, B succeeds — SENDs discarded
+    // ================================================================
+
+    @Test
+    @DisplayName("Duplicate subscription: A fails, B succeeds — buffered SENDs discarded")
+    void testDuplicateSubscription_aFailsBSucceeds_discardsBufferedSends() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", destination);
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", destination);
+
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // A fails
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler,
+                new RuntimeException("failed"));
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // B succeeds — but failure already recorded, SENDs discarded
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+    }
+
+    // ================================================================
+    // 23. Both duplicate subscriptions succeed — SEND released
+    // ================================================================
+
+    @Test
+    @DisplayName("Both duplicate subscriptions succeed: buffered SENDs released")
+    void testDuplicateSubscription_bothSucceed_releasesBufferedSends() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", destination);
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", destination);
+
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // Both succeed
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).hasSize(1);
+        assertThat(testChannel.getDispatchedMessages().get(0)).isSameAs(sendMsg);
+    }
+
+    // ================================================================
+    // 24. Disconnect while duplicate subscriptions are pending
+    // ================================================================
+
+    @Test
+    @DisplayName("Disconnect while duplicate subscriptions pending: clears all state")
+    void testDisconnectWhileDuplicateSubscriptionsPending() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", destination);
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", destination);
+
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel)).isNull();
+
+        // Disconnect — clears everything
+        interceptor.removeSession(sessionId);
+
+        // Completing subscriptions after disconnect should not release
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler, null);
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+        assertThat(interceptor.hasPendingSubscriptions(sessionId)).isFalse();
+    }
+
+    // ================================================================
+    // 25. Multiple buffered SENDs with duplicate subscriptions
+    // ================================================================
+
+    @Test
+    @DisplayName("Multiple buffered SENDs released in FIFO after all duplicate subscriptions complete")
+    void testMultipleBufferedSends_duplicateSubscriptions() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", destination);
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", destination);
+
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        // Buffer 3 SENDs
+        Message<?> send1 = createSendMessage(sessionId, "/app/chat.sendMessage");
+        Message<?> send2 = createSendMessage(sessionId, "/app/chat.sendMessage");
+        Message<?> send3 = createSendMessage(sessionId, "/app/chat.sendMessage");
+
+        assertThat(interceptor.preSend(send1, testChannel)).isNull();
+        assertThat(interceptor.preSend(send2, testChannel)).isNull();
+        assertThat(interceptor.preSend(send3, testChannel)).isNull();
+
+        // A completes — SENDs still buffered
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages()).isEmpty();
+
+        // B completes — all 3 SENDs released in FIFO
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+        List<Message<?>> dispatched = testChannel.getDispatchedMessages();
+        assertThat(dispatched).hasSize(3);
+        assertThat(dispatched.get(0)).isSameAs(send1);
+        assertThat(dispatched.get(1)).isSameAs(send2);
+        assertThat(dispatched.get(2)).isSameAs(send3);
+    }
+
+    // ================================================================
+    // 26. Session isolation with duplicate subscriptions
+    // ================================================================
+
+    @Test
+    @DisplayName("Session isolation: duplicate subscriptions in session A do not affect session B")
+    void testSessionIsolation_duplicateSubscriptions() {
+        String sessionA = UUID.randomUUID().toString();
+        String sessionB = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        // Session A: two duplicate subscriptions pending
+        Message<?> subA1 = createSubscribeMessage(sessionA, "sub-a1", destination);
+        Message<?> subA2 = createSubscribeMessage(sessionA, "sub-a2", destination);
+        interceptor.preSend(subA1, testChannel);
+        interceptor.preSend(subA2, testChannel);
+
+        // Session B: no pending subscription
+        Message<?> sendB = createSendMessage(sessionB, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendB, testChannel))
+                .as("Session B SEND passes through (no pending subs)")
+                .isSameAs(sendB);
+
+        // Session A: SEND is buffered
+        Message<?> sendA = createSendMessage(sessionA, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendA, testChannel)).isNull();
+
+        // Complete session A subscriptions
+        interceptor.afterMessageHandled(subA1, testChannel, brokerHandler, null);
+        interceptor.afterMessageHandled(subA2, testChannel, brokerHandler, null);
+
+        // Only session A's SEND was dispatched
+        List<Message<?>> dispatched = testChannel.getDispatchedMessages();
+        assertThat(dispatched).hasSize(1);
+        assertThat(dispatched.get(0)).isSameAs(sendA);
+    }
+
+    // ================================================================
     // Test infrastructure
     // ================================================================
 

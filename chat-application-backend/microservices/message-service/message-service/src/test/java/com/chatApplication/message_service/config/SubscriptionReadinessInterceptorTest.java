@@ -61,6 +61,17 @@ class SubscriptionReadinessInterceptorTest {
                 new byte[0], accessor.getMessageHeaders());
     }
 
+    private Message<?> createSubscribeMessage(
+            String sessionId, String subId, String destination) {
+        StompHeaderAccessor accessor =
+                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setSessionId(sessionId);
+        accessor.setSubscriptionId(subId);
+        accessor.setDestination(destination);
+        return MessageBuilder.createMessage(
+                new byte[0], accessor.getMessageHeaders());
+    }
+
     @Test
     @DisplayName("SEND passes through when session has no pending subscriptions")
     void testSendPassesThroughWhenNoPendingSubscription() {
@@ -78,12 +89,8 @@ class SubscriptionReadinessInterceptorTest {
     void testSendIsBufferedWhenPendingSubscriptionExists() {
         String sessionId = UUID.randomUUID().toString();
 
-        StompHeaderAccessor subAccessor =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        subAccessor.setSessionId(sessionId);
-        subAccessor.setDestination("/topic/public");
-        Message<?> subMsg = MessageBuilder.createMessage(
-                new byte[0], subAccessor.getMessageHeaders());
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
         interceptor.preSend(subMsg, channel);
 
         Message<?> sendMsg = createStompMessage(
@@ -98,12 +105,8 @@ class SubscriptionReadinessInterceptorTest {
     void testAfterMessageHandledReleasesBufferedSends() {
         String sessionId = UUID.randomUUID().toString();
 
-        StompHeaderAccessor subAccessor =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        subAccessor.setSessionId(sessionId);
-        subAccessor.setDestination("/topic/public");
-        Message<?> subMsg = MessageBuilder.createMessage(
-                new byte[0], subAccessor.getMessageHeaders());
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
         interceptor.preSend(subMsg, channel);
 
         Message<?> sendMsg = createStompMessage(
@@ -124,8 +127,8 @@ class SubscriptionReadinessInterceptorTest {
     void testAfterMessageHandledPassesThroughWhenNoBuffer() {
         String sessionId = UUID.randomUUID().toString();
 
-        Message<?> subMsg = createStompMessage(
-                StompCommand.SUBSCRIBE, sessionId, "/topic/public");
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
         interceptor.afterMessageHandled(subMsg, channel, brokerHandler, null);
 
         verify(channel, never()).send(any());
@@ -136,12 +139,8 @@ class SubscriptionReadinessInterceptorTest {
     void testRemoveSessionClearsState() {
         String sessionId = UUID.randomUUID().toString();
 
-        StompHeaderAccessor subAccessor =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        subAccessor.setSessionId(sessionId);
-        subAccessor.setDestination("/topic/public");
-        Message<?> subMsg = MessageBuilder.createMessage(
-                new byte[0], subAccessor.getMessageHeaders());
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
         interceptor.preSend(subMsg, channel);
 
         Message<?> sendMsg = createStompMessage(
@@ -163,12 +162,8 @@ class SubscriptionReadinessInterceptorTest {
         String session2 = UUID.randomUUID().toString();
 
         // Register pending subscription for session1 only
-        StompHeaderAccessor subAccessor =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        subAccessor.setSessionId(session1);
-        subAccessor.setDestination("/topic/public");
-        Message<?> subMsg = MessageBuilder.createMessage(
-                new byte[0], subAccessor.getMessageHeaders());
+        Message<?> subMsg = createSubscribeMessage(
+                session1, "sub-0", "/topic/public");
         interceptor.preSend(subMsg, channel);
 
         // SEND from session1 is buffered
@@ -187,21 +182,13 @@ class SubscriptionReadinessInterceptorTest {
     void testNonSendFramesPassThroughWithPendingSubscription() {
         String sessionId = UUID.randomUUID().toString();
 
-        StompHeaderAccessor subAccessor =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        subAccessor.setSessionId(sessionId);
-        subAccessor.setDestination("/topic/public");
-        Message<?> subMsg = MessageBuilder.createMessage(
-                new byte[0], subAccessor.getMessageHeaders());
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
         interceptor.preSend(subMsg, channel);
 
         // Another SUBSCRIBE passes through
-        StompHeaderAccessor sub2Accessor =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        sub2Accessor.setSessionId(sessionId);
-        sub2Accessor.setDestination("/topic/private");
-        Message<?> sub2Msg = MessageBuilder.createMessage(
-                new byte[0], sub2Accessor.getMessageHeaders());
+        Message<?> sub2Msg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/private");
         Message<?> result = interceptor.preSend(sub2Msg, channel);
 
         assertThat(result).isSameAs(sub2Msg);
@@ -212,12 +199,8 @@ class SubscriptionReadinessInterceptorTest {
     void testMultipleBufferedSendsReleasedInOrder() {
         String sessionId = UUID.randomUUID().toString();
 
-        StompHeaderAccessor subAccessor =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        subAccessor.setSessionId(sessionId);
-        subAccessor.setDestination("/topic/public");
-        Message<?> subMsg = MessageBuilder.createMessage(
-                new byte[0], subAccessor.getMessageHeaders());
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
         interceptor.preSend(subMsg, channel);
 
         Message<?> send1 = createStompMessage(
@@ -248,20 +231,11 @@ class SubscriptionReadinessInterceptorTest {
         String session2 = UUID.randomUUID().toString();
 
         // Both sessions have pending subscriptions
-        StompHeaderAccessor sub1 =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        sub1.setSessionId(session1);
-        sub1.setDestination("/topic/public");
         interceptor.preSend(
-                MessageBuilder.createMessage(new byte[0], sub1.getMessageHeaders()),
+                createSubscribeMessage(session1, "sub-a", "/topic/public"),
                 channel);
-
-        StompHeaderAccessor sub2 =
-                StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
-        sub2.setSessionId(session2);
-        sub2.setDestination("/topic/public");
         interceptor.preSend(
-                MessageBuilder.createMessage(new byte[0], sub2.getMessageHeaders()),
+                createSubscribeMessage(session2, "sub-b", "/topic/public"),
                 channel);
 
         // Buffer SENDs for both
@@ -277,8 +251,7 @@ class SubscriptionReadinessInterceptorTest {
 
         // Release session2's buffered SEND
         interceptor.afterMessageHandled(
-                MessageBuilder.createMessage(
-                        new byte[0], sub2.getMessageHeaders()),
+                createSubscribeMessage(session2, "sub-b", "/topic/public"),
                 channel, brokerHandler, null);
 
         ArgumentCaptor<Message<?>> captor =
@@ -286,5 +259,170 @@ class SubscriptionReadinessInterceptorTest {
         verify(channel, times(1)).send(captor.capture());
 
         assertThat(captor.getValue()).isSameAs(send2);
+    }
+
+    // ================================================================
+    // 10. Failed subscription: buffered SENDs are discarded, not released
+    // ================================================================
+
+    @Test
+    @DisplayName("afterMessageHandled with exception discards buffered SENDs (not released)")
+    void testFailedSubscription_discardsBufferedSends() {
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
+        interceptor.preSend(subMsg, channel);
+
+        Message<?> sendMsg = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        interceptor.preSend(sendMsg, channel);
+
+        // Simulate failed subscription (ex != null)
+        RuntimeException failure = new RuntimeException("broker error");
+        interceptor.afterMessageHandled(subMsg, channel, brokerHandler, failure);
+
+        // SEND should NOT be released (subscription failed)
+        verify(channel, never()).send(any());
+    }
+
+    // ================================================================
+    // 11. Multiple subscriptions: SEND only released when ALL complete
+    // ================================================================
+
+    @Test
+    @DisplayName("Multiple subscriptions: buffered SENDs released only when all subscriptions complete")
+    void testMultipleSubscriptions_onlyReleaseWhenAllComplete() {
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> sub1Msg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/A");
+        Message<?> sub2Msg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/B");
+
+        // Both subscriptions pending
+        interceptor.preSend(sub1Msg, channel);
+        interceptor.preSend(sub2Msg, channel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        interceptor.preSend(sendMsg, channel);
+
+        // First subscription completes - SEND should NOT be released
+        interceptor.afterMessageHandled(sub1Msg, channel, brokerHandler, null);
+        verify(channel, never()).send(any());
+
+        // Second subscription completes - NOW SEND should be released
+        interceptor.afterMessageHandled(sub2Msg, channel, brokerHandler, null);
+
+        ArgumentCaptor<Message<?>> captor =
+                ArgumentCaptor.forClass(Message.class);
+        verify(channel, times(1)).send(captor.capture());
+        assertThat(captor.getValue()).isSameAs(sendMsg);
+    }
+
+    // ================================================================
+    // 12. One subscription fails, one succeeds: SENDs discarded
+    // ================================================================
+
+    @Test
+    @DisplayName("One subscription fails, one succeeds: buffered SENDs discarded")
+    void testOneFailOneSuccess_discardsBufferedSends() {
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> sub1Msg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/A");
+        Message<?> sub2Msg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/B");
+
+        // Both subscriptions pending
+        interceptor.preSend(sub1Msg, channel);
+        interceptor.preSend(sub2Msg, channel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        interceptor.preSend(sendMsg, channel);
+
+        // First subscription fails - SEND should NOT be released
+        interceptor.afterMessageHandled(sub1Msg, channel, brokerHandler,
+                new RuntimeException("failed"));
+        verify(channel, never()).send(any());
+
+        // Second subscription succeeds - no more pending, but previous
+        // failure means we should discard (not release) the buffer
+        // because the first subscription was never registered.
+        interceptor.afterMessageHandled(sub2Msg, channel, brokerHandler, null);
+
+        // SENDs should be discarded, not released
+        verify(channel, never()).send(any());
+    }
+
+    // ================================================================
+    // 13. Duplicate subscription IDs to same destination: independently tracked
+    // ================================================================
+
+    @Test
+    @DisplayName("Duplicate subscription IDs to same destination: first completion does NOT release SEND")
+    void testDuplicateSubIds_sameDestination_firstCompletionDoesNotRelease() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        // Two SUBSCRIBEs with different subscription IDs to same destination
+        Message<?> sub1Msg = createSubscribeMessage(sessionId, "sub-0", destination);
+        Message<?> sub2Msg = createSubscribeMessage(sessionId, "sub-1", destination);
+
+        interceptor.preSend(sub1Msg, channel);
+        interceptor.preSend(sub2Msg, channel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        interceptor.preSend(sendMsg, channel);
+
+        // First subscription completes - SEND should NOT be released
+        interceptor.afterMessageHandled(sub1Msg, channel, brokerHandler, null);
+        verify(channel, never()).send(any());
+
+        // Second subscription completes - NOW SEND should be released
+        interceptor.afterMessageHandled(sub2Msg, channel, brokerHandler, null);
+
+        ArgumentCaptor<Message<?>> captor =
+                ArgumentCaptor.forClass(Message.class);
+        verify(channel, times(1)).send(captor.capture());
+        assertThat(captor.getValue()).isSameAs(sendMsg);
+    }
+
+    // ================================================================
+    // 14. One duplicate succeeds, one fails: SENDs discarded
+    // ================================================================
+
+    @Test
+    @DisplayName("Duplicate subscription: one succeeds, one fails: SENDs discarded")
+    void testDuplicateSubIds_oneFailOneSuccess_discardsBufferedSends() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        Message<?> sub1Msg = createSubscribeMessage(sessionId, "sub-0", destination);
+        Message<?> sub2Msg = createSubscribeMessage(sessionId, "sub-1", destination);
+
+        interceptor.preSend(sub1Msg, channel);
+        interceptor.preSend(sub2Msg, channel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        interceptor.preSend(sendMsg, channel);
+
+        // First subscription fails
+        interceptor.afterMessageHandled(sub1Msg, channel, brokerHandler,
+                new RuntimeException("failed"));
+        verify(channel, never()).send(any());
+
+        // Second subscription succeeds - failure flag set, should discard
+        interceptor.afterMessageHandled(sub2Msg, channel, brokerHandler, null);
+
+        verify(channel, never()).send(any());
     }
 }

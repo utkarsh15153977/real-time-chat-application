@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -58,8 +57,12 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
             LoggerFactory.getLogger(SubscriptionReadinessInterceptor.class);
 
     /**
-     * Per-session set of destinations with pending subscription registrations.
-     * Key: STOMP session ID. Value: set of destinations being subscribed to.
+     * Per-session set of subscription IDs with pending registration operations.
+     * Key: STOMP session ID. Value: set of subscription IDs being registered.
+     *
+     * <p>Spring uniquely identifies subscriptions by (sessionId, subscriptionId).
+     * Two SUBSCRIBEs with different subscription IDs to the same destination are
+     * independent registration operations that must be tracked independently.
      *
      * <p>Populated in {@link #preSend} when a SUBSCRIBE frame arrives.
      * Cleaned up in {@link #afterMessageHandled} when
@@ -70,44 +73,55 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
             new ConcurrentHashMap<>();
 
     /**
+     * Per-session flag indicating whether any subscription for this session
+     * has failed. When set, buffered SENDs are discarded rather than released,
+     * because the session may be missing a required subscription.
+     *
+     * <p>Set in {@link #afterMessageHandled} when {@code ex != null}.
+     * Cleaned up on session disconnect via {@link #removeSession(String)}.
+     */
+    private final ConcurrentHashMap<String, Boolean> hasSubscriptionFailure =
+            new ConcurrentHashMap<>();
+
+    /**
      * Per-session buffer of SEND frames held while subscriptions are pending.
      * Key: STOMP session ID. Value: ordered list of buffered SEND messages.
      *
      * <p>Populated in {@link #preSend} when a SEND arrives while the session
      * has pending subscriptions. Released in {@link #afterMessageHandled}
-     * when the corresponding SUBSCRIBE registration completes.
+     * when all subscription registrations complete (or discarded on failure).
      */
     private final ConcurrentHashMap<String, List<Message<?>>> bufferedSends =
             new ConcurrentHashMap<>();
 
     /**
-     * Records a SUBSCRIBE destination as pending for the given session.
+     * Records a subscription ID as pending for the given session.
      *
-     * @param sessionId  the STOMP session ID
-     * @param destination the SUBSCRIBE destination (e.g. {@code /topic/public})
+     * @param sessionId      the STOMP session ID
+     * @param subscriptionId the STOMP subscription ID from the SUBSCRIBE frame
      */
-    void addPendingSubscription(String sessionId, String destination) {
+    void addPendingSubscription(String sessionId, String subscriptionId) {
         pendingSubscriptions
                 .computeIfAbsent(sessionId, k -> ConcurrentHashMap.newKeySet())
-                .add(destination);
-        log.debug("Subscription pending: session={} dest={}", sessionId, destination);
+                .add(subscriptionId);
+        log.debug("Subscription pending: session={} subId={}", sessionId, subscriptionId);
     }
 
     /**
-     * Removes a subscription destination from the pending set for a session.
+     * Removes a subscription ID from the pending set for a session.
      *
-     * @param sessionId  the STOMP session ID
-     * @param destination the destination that was subscribed to
+     * @param sessionId      the STOMP session ID
+     * @param subscriptionId the subscription ID that was registered
      */
-    void removePendingSubscription(String sessionId, String destination) {
+    void removePendingSubscription(String sessionId, String subscriptionId) {
         Set<String> pending = pendingSubscriptions.get(sessionId);
         if (pending != null) {
-            pending.remove(destination);
+            pending.remove(subscriptionId);
             if (pending.isEmpty()) {
                 pendingSubscriptions.remove(sessionId);
             }
         }
-        log.debug("Subscription confirmed: session={} dest={}", sessionId, destination);
+        log.debug("Subscription confirmed: session={} subId={}", sessionId, subscriptionId);
     }
 
     /**
@@ -164,12 +178,28 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
     }
 
     /**
+     * Discards all buffered SENDs for the given session without
+     * re-dispatching them. Used when a subscription fails and the
+     * buffered SENDs cannot be delivered.
+     *
+     * @param sessionId the STOMP session ID
+     */
+    void discardBufferedSends(String sessionId) {
+        List<Message<?>> removed = bufferedSends.remove(sessionId);
+        if (removed != null && !removed.isEmpty()) {
+            log.warn("Discarding {} buffered SENDs for session={} (subscription failed)",
+                    removed.size(), sessionId);
+        }
+    }
+
+    /**
      * Cleans up all state for a session. Called on WebSocket disconnect.
      *
      * @param sessionId the STOMP session ID
      */
     void removeSession(String sessionId) {
         pendingSubscriptions.remove(sessionId);
+        hasSubscriptionFailure.remove(sessionId);
         bufferedSends.remove(sessionId);
         log.debug("Session cleaned up: session={}", sessionId);
     }
@@ -198,9 +228,9 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
 
         // --- SUBSCRIBE: record pending subscription ---
         if (command == StompCommand.SUBSCRIBE) {
-            String destination = accessor.getDestination();
-            if (destination != null) {
-                addPendingSubscription(sessionId, destination);
+            String subscriptionId = accessor.getSubscriptionId();
+            if (subscriptionId != null) {
+                addPendingSubscription(sessionId, subscriptionId);
             }
             return message;
         }
@@ -224,13 +254,21 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * Fires after each handler on the {@code clientInboundChannel} completes
      * processing a message. When the handler is
      * {@link SimpleBrokerMessageHandler} and the message was a SUBSCRIBE,
-     * the subscription has been registered and any buffered SENDs for this
-     * session are released.
+     * the subscription registration has either completed or failed.
+     *
+     * <p>On success ({@code ex == null}): the subscription is guaranteed to
+     * be in the {@code DefaultSubscriptionRegistry}. If this was the last
+     * pending subscription for the session, buffered SENDs are released.
+     *
+     * <p>On failure ({@code ex != null}): the subscription was NOT registered.
+     * The pending destination is removed, but buffered SENDs are NOT released
+     * because they may depend on other subscriptions still being registered.
+     * If no other subscriptions remain pending, the buffered SENDs are
+     * discarded (they cannot be delivered without the failed subscription).
      *
      * <p>This callback runs on the {@code clientInboundChannelExecutor}
      * thread, after {@code SimpleBrokerMessageHandler.handleMessageInternal()}
-     * has returned. The subscription is guaranteed to be in the
-     * {@code DefaultSubscriptionRegistry} at this point.
+     * has returned.
      */
     @Override
     public void afterMessageHandled(
@@ -254,12 +292,30 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
         }
 
         String sessionId = accessor.getSessionId();
-        String destination = accessor.getDestination();
-        if (sessionId == null || destination == null) {
+        String subscriptionId = accessor.getSubscriptionId();
+        if (sessionId == null || subscriptionId == null) {
             return;
         }
 
-        removePendingSubscription(sessionId, destination);
-        releaseBufferedSends(sessionId, channel);
+        if (ex != null) {
+            log.warn("Subscription FAILED: session={} subId={} error={}",
+                    sessionId, subscriptionId, ex.getMessage());
+            hasSubscriptionFailure.put(sessionId, Boolean.TRUE);
+            removePendingSubscription(sessionId, subscriptionId);
+            if (!hasPendingSubscriptions(sessionId)) {
+                discardBufferedSends(sessionId);
+            }
+            return;
+        }
+
+        removePendingSubscription(sessionId, subscriptionId);
+
+        if (!hasPendingSubscriptions(sessionId)) {
+            if (Boolean.TRUE.equals(hasSubscriptionFailure.remove(sessionId))) {
+                discardBufferedSends(sessionId);
+            } else {
+                releaseBufferedSends(sessionId, channel);
+            }
+        }
     }
 }
