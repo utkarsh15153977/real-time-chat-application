@@ -79,7 +79,7 @@ class SubscriptionReadinessRegressionTest {
 
     @BeforeEach
     void setUp() {
-        interceptor = new SubscriptionReadinessInterceptor();
+        interceptor = new SubscriptionReadinessInterceptor(100, 5000);
         subscriptionRegistry = new DefaultSubscriptionRegistry();
         channel = new TestMessageChannel();
         brokerHandler = Mockito.mock(SimpleBrokerMessageHandler.class);
@@ -1394,6 +1394,210 @@ class SubscriptionReadinessRegressionTest {
                 .as("SEND released only after BOTH subscriptions complete")
                 .hasSize(1);
         assertThat(testChannel.getDispatchedMessages().get(0)).isSameAs(sendMsg);
+    }
+
+    // ================================================================
+    // 29. Buffer overflow: SEND dropped when max reached (bounded buffer)
+    // ================================================================
+
+    @Test
+    @DisplayName("Buffer overflow: SEND dropped when maxBufferedMessages reached")
+    void testBufferOverflow_sendDroppedWhenMaxReached() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(3, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        // Buffer 3 SENDs (hits the limit)
+        Message<?> send1 = createSendMessage(sessionId, "/app/chat.sendMessage");
+        Message<?> send2 = createSendMessage(sessionId, "/app/chat.sendMessage");
+        Message<?> send3 = createSendMessage(sessionId, "/app/chat.sendMessage");
+
+        assertThat(bounded.preSend(send1, testChannel)).isNull();
+        assertThat(bounded.preSend(send2, testChannel)).isNull();
+        assertThat(bounded.preSend(send3, testChannel)).isNull();
+
+        // 4th SEND overflows (dropped)
+        Message<?> send4 = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(bounded.preSend(send4, testChannel))
+                .as("Overflow SEND should be dropped")
+                .isNull();
+
+        assertThat(bounded.getOverflowCount()).isEqualTo(1);
+
+        // Complete subscription
+        bounded.afterMessageHandled(subMsg, testChannel, brokerHandler, null);
+
+        // Only 3 SENDs released
+        assertThat(testChannel.getDispatchedMessages()).hasSize(3);
+        assertThat(bounded.getReleasedCount()).isEqualTo(3);
+    }
+
+    // ================================================================
+    // 30. Timeout sweep: stale session buffer discarded
+    // ================================================================
+
+    @Test
+    @DisplayName("Timeout sweep: stale session buffer discarded after bufferTimeoutMs")
+    void testTimeoutSweep_staleSessionDiscarded() throws Exception {
+        // Use very short timeout (100ms) so sweep fires quickly
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(100, 100);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        // Buffer a SEND
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(bounded.preSend(sendMsg, testChannel)).isNull();
+
+        // Wait for timeout + sweep cycle (sweep runs every 2s, timeout is 100ms)
+        Thread.sleep(3000);
+
+        // Buffer should have been swept
+        assertThat(bounded.getStaleSweepCount())
+                .as("Stale sweep should have fired at least once")
+                .isGreaterThanOrEqualTo(1);
+
+        // Buffer was discarded, so afterMessageHandled should NOT release
+        bounded.afterMessageHandled(subMsg, testChannel, brokerHandler, null);
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND should have been discarded by sweep, not released")
+                .isEmpty();
+    }
+
+    // ================================================================
+    // 31. FIFO ordering preserved with bounded buffer
+    // ================================================================
+
+    @Test
+    @DisplayName("Bounded buffer: FIFO ordering preserved within buffer limit")
+    void testBoundedBuffer_fifoOrderingPreserved() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(5, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        // Buffer 5 SENDs
+        List<Message<?>> sends = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            Message<?> send = createSendMessage(sessionId, "/app/chat.sendMessage");
+            sends.add(send);
+            assertThat(bounded.preSend(send, testChannel)).isNull();
+        }
+
+        // Release
+        bounded.afterMessageHandled(subMsg, testChannel, brokerHandler, null);
+
+        // Verify FIFO ordering
+        List<Message<?>> dispatched = testChannel.getDispatchedMessages();
+        assertThat(dispatched).hasSize(5);
+        for (int i = 0; i < 5; i++) {
+            assertThat(dispatched.get(i))
+                    .as("SEND %d should be in FIFO position", i + 1)
+                    .isSameAs(sends.get(i));
+        }
+    }
+
+    // ================================================================
+    // 32. Overflow + release combined: correct counts
+    // ================================================================
+
+    @Test
+    @DisplayName("Overflow + release: correct metric counts")
+    void testOverflowAndRelease_correctCounts() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(3, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        // Buffer 3 SENDs (fits)
+        for (int i = 0; i < 3; i++) {
+            bounded.preSend(
+                    createSendMessage(sessionId, "/app/chat.sendMessage"),
+                    testChannel);
+        }
+
+        // 2 more SENDs overflow
+        bounded.preSend(
+                createSendMessage(sessionId, "/app/chat.sendMessage"),
+                testChannel);
+        bounded.preSend(
+                createSendMessage(sessionId, "/app/chat.sendMessage"),
+                testChannel);
+
+        assertThat(bounded.getOverflowCount()).isEqualTo(2);
+
+        // Complete subscription
+        bounded.afterMessageHandled(subMsg, testChannel, brokerHandler, null);
+
+        assertThat(bounded.getReleasedCount()).isEqualTo(3);
+        assertThat(testChannel.getDispatchedMessages()).hasSize(3);
+    }
+
+    // ================================================================
+    // 33. Overflow across concurrent sessions: independent limits
+    // ================================================================
+
+    @Test
+    @DisplayName("Concurrent overflow: each session has independent buffer limit")
+    void testConcurrentOverflow_independentLimits() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(2, 5000);
+
+        String sessionA = UUID.randomUUID().toString();
+        String sessionB = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        // Session A: buffer 2 (fits), then 1 overflow
+        bounded.preSend(
+                createSubscribeMessage(sessionA, "sub-a", "/topic/public"),
+                testChannel);
+        bounded.preSend(createSendMessage(sessionA, "/app/chat.sendMessage"), testChannel);
+        bounded.preSend(createSendMessage(sessionA, "/app/chat.sendMessage"), testChannel);
+        bounded.preSend(createSendMessage(sessionA, "/app/chat.sendMessage"), testChannel);
+
+        // Session B: buffer 2 (fits, independent of A)
+        bounded.preSend(
+                createSubscribeMessage(sessionB, "sub-b", "/topic/public"),
+                testChannel);
+        bounded.preSend(createSendMessage(sessionB, "/app/chat.sendMessage"), testChannel);
+        bounded.preSend(createSendMessage(sessionB, "/app/chat.sendMessage"), testChannel);
+
+        assertThat(bounded.getOverflowCount())
+                .as("Only session A should have overflow")
+                .isEqualTo(1);
+
+        // Complete both
+        bounded.afterMessageHandled(
+                createSubscribeMessage(sessionA, "sub-a", "/topic/public"),
+                testChannel, brokerHandler, null);
+        bounded.afterMessageHandled(
+                createSubscribeMessage(sessionB, "sub-b", "/topic/public"),
+                testChannel, brokerHandler, null);
+
+        assertThat(testChannel.getDispatchedMessages())
+                .as("2 from A + 2 from B = 4 total released")
+                .hasSize(4);
     }
 
     // ================================================================

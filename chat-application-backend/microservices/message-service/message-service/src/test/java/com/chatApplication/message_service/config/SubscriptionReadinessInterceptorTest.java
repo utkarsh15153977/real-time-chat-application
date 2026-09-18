@@ -43,7 +43,7 @@ class SubscriptionReadinessInterceptorTest {
 
     @BeforeEach
     void setUp() {
-        interceptor = new SubscriptionReadinessInterceptor();
+        interceptor = new SubscriptionReadinessInterceptor(100, 5000);
         channel = mock(MessageChannel.class);
         brokerHandler = mock(SimpleBrokerMessageHandler.class);
     }
@@ -424,5 +424,282 @@ class SubscriptionReadinessInterceptorTest {
         interceptor.afterMessageHandled(sub2Msg, channel, brokerHandler, null);
 
         verify(channel, never()).send(any());
+    }
+
+    // ================================================================
+    // 15. Buffer overflow: SEND is dropped when buffer is full
+    // ================================================================
+
+    @Test
+    @DisplayName("Buffer overflow: SEND dropped when maxBufferedMessages reached")
+    void testBufferOverflow_sendDroppedWhenFull() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(3, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
+        bounded.preSend(subMsg, channel);
+
+        // Buffer 3 SENDs (hits the limit of 3)
+        Message<?> send1 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        Message<?> send2 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        Message<?> send3 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+
+        assertThat(bounded.preSend(send1, channel)).isNull();
+        assertThat(bounded.preSend(send2, channel)).isNull();
+        assertThat(bounded.preSend(send3, channel)).isNull();
+
+        // 4th SEND should be dropped (overflow)
+        Message<?> send4 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        Message<?> result = bounded.preSend(send4, channel);
+
+        assertThat(result)
+                .as("Overflow SEND should be dropped (preSend returns null)")
+                .isNull();
+        assertThat(bounded.getOverflowCount())
+                .as("Overflow count should be 1")
+                .isEqualTo(1);
+    }
+
+    // ================================================================
+    // 16. Buffer overflow: only non-overflow SENDs are released
+    // ================================================================
+
+    @Test
+    @DisplayName("Buffer overflow: only non-overflow SENDs released on subscription complete")
+    void testBufferOverflow_onlyNonOverflowSendsReleased() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(2, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
+        bounded.preSend(subMsg, channel);
+
+        // Buffer 2 SENDs (hits the limit)
+        Message<?> send1 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        Message<?> send2 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+
+        assertThat(bounded.preSend(send1, channel)).isNull();
+        assertThat(bounded.preSend(send2, channel)).isNull();
+
+        // 3rd SEND overflows
+        Message<?> send3 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        bounded.preSend(send3, channel);
+
+        // Complete subscription
+        bounded.afterMessageHandled(subMsg, channel, brokerHandler, null);
+
+        // Only 2 SENDs should be released (the 3rd was dropped)
+        ArgumentCaptor<Message<?>> captor =
+                ArgumentCaptor.forClass(Message.class);
+        verify(channel, times(2)).send(captor.capture());
+
+        assertThat(captor.getAllValues()).containsExactly(send1, send2);
+        assertThat(bounded.getOverflowCount()).isEqualTo(1);
+        assertThat(bounded.getReleasedCount()).isEqualTo(2);
+    }
+
+    // ================================================================
+    // 17. Metrics: discardedCount increments on failure discard
+    // ================================================================
+
+    @Test
+    @DisplayName("Metrics: discardedCount increments when buffered SENDs discarded on failure")
+    void testMetrics_discardedCountOnFailure() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(10, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
+        bounded.preSend(subMsg, channel);
+
+        Message<?> send1 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        Message<?> send2 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        bounded.preSend(send1, channel);
+        bounded.preSend(send2, channel);
+
+        // Subscription fails
+        bounded.afterMessageHandled(subMsg, channel, brokerHandler,
+                new RuntimeException("failed"));
+
+        assertThat(bounded.getDiscardedCount())
+                .as("discardedCount should be 2")
+                .isEqualTo(2);
+    }
+
+    // ================================================================
+    // 18. Metrics: releasedCount increments on release
+    // ================================================================
+
+    @Test
+    @DisplayName("Metrics: releasedCount increments when buffered SENDs released")
+    void testMetrics_releasedCountOnRelease() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(10, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
+        bounded.preSend(subMsg, channel);
+
+        Message<?> send1 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        Message<?> send2 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        Message<?> send3 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        bounded.preSend(send1, channel);
+        bounded.preSend(send2, channel);
+        bounded.preSend(send3, channel);
+
+        // Subscription succeeds
+        bounded.afterMessageHandled(subMsg, channel, brokerHandler, null);
+
+        assertThat(bounded.getReleasedCount())
+                .as("releasedCount should be 3")
+                .isEqualTo(3);
+    }
+
+    // ================================================================
+    // 19. Multiple overflows accumulate
+    // ================================================================
+
+    @Test
+    @DisplayName("Multiple overflows: overflowCount accumulates across SENDs")
+    void testMultipleOverflows_accumulate() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(1, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
+        bounded.preSend(subMsg, channel);
+
+        // 1st SEND fits (buffer size 1)
+        Message<?> send1 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        bounded.preSend(send1, channel);
+
+        // 2nd SEND overflows
+        Message<?> send2 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        bounded.preSend(send2, channel);
+
+        // 3rd SEND overflows
+        Message<?> send3 = createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+        bounded.preSend(send3, channel);
+
+        assertThat(bounded.getOverflowCount())
+                .as("overflowCount should be 2")
+                .isEqualTo(2);
+    }
+
+    // ================================================================
+    // 20. No overflow when buffer has room
+    // ================================================================
+
+    @Test
+    @DisplayName("No overflow when buffer has room")
+    void testNoOverflow_whenBufferHasRoom() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(5, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+
+        Message<?> subMsg = createSubscribeMessage(
+                sessionId, "sub-0", "/topic/public");
+        bounded.preSend(subMsg, channel);
+
+        // Buffer 5 SENDs (exactly at limit)
+        for (int i = 0; i < 5; i++) {
+            Message<?> send = createStompMessage(
+                    StompCommand.SEND, sessionId, "/app/chat.sendMessage");
+            bounded.preSend(send, channel);
+        }
+
+        assertThat(bounded.getOverflowCount())
+                .as("No overflow when at exact limit")
+                .isEqualTo(0);
+    }
+
+    // ================================================================
+    // 21. Overflow across multiple sessions is independent
+    // ================================================================
+
+    @Test
+    @DisplayName("Overflow across sessions: each session has independent buffer limit")
+    void testOverflow_independentPerSession() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(2, 5000);
+
+        String session1 = UUID.randomUUID().toString();
+        String session2 = UUID.randomUUID().toString();
+
+        // Session 1: 2 SENDs fit
+        bounded.preSend(
+                createSubscribeMessage(session1, "sub-1", "/topic/public"),
+                channel);
+        bounded.preSend(createStompMessage(
+                StompCommand.SEND, session1, "/app/chat.sendMessage"), channel);
+        bounded.preSend(createStompMessage(
+                StompCommand.SEND, session1, "/app/chat.sendMessage"), channel);
+
+        // Session 2: also 2 SENDs fit (independent)
+        bounded.preSend(
+                createSubscribeMessage(session2, "sub-2", "/topic/public"),
+                channel);
+        bounded.preSend(createStompMessage(
+                StompCommand.SEND, session2, "/app/chat.sendMessage"), channel);
+        bounded.preSend(createStompMessage(
+                StompCommand.SEND, session2, "/app/chat.sendMessage"), channel);
+
+        assertThat(bounded.getOverflowCount())
+                .as("No overflow in either session")
+                .isEqualTo(0);
+    }
+
+    // ================================================================
+    // 22. removeSession discards and counts correctly
+    // ================================================================
+
+    @Test
+    @DisplayName("removeSession: discardedCount increments for buffered SENDs")
+    void testRemoveSession_discardedCounted() {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(10, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+
+        bounded.preSend(
+                createSubscribeMessage(sessionId, "sub-0", "/topic/public"),
+                channel);
+        bounded.preSend(createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage"), channel);
+        bounded.preSend(createStompMessage(
+                StompCommand.SEND, sessionId, "/app/chat.sendMessage"), channel);
+
+        bounded.removeSession(sessionId);
+
+        assertThat(bounded.getDiscardedCount())
+                .as("discardedCount should be 2 after removeSession")
+                .isEqualTo(2);
     }
 }

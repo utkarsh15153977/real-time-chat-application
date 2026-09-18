@@ -2,6 +2,7 @@ package com.chatApplication.message_service.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
@@ -13,10 +14,17 @@ import org.springframework.messaging.support.MessageHeaderAccessor;
 
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import jakarta.annotation.PreDestroy;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Server-side subscription readiness interceptor that resolves the STOMP
@@ -38,9 +46,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * one client's subscription readiness cannot incorrectly release another
  * client's buffered SEND.
  *
- * <p>Threading: No blocking synchronization is used. All data structures
- * are lock-free ({@link ConcurrentHashMap}, {@link CopyOnWriteArrayList}).
- * Buffered SENDs are re-dispatched asynchronously via
+ * <p>Bounded buffer: The per-session SEND buffer is bounded by
+ * {@code maxBufferedMessages} (default 100). When the buffer is full, the
+ * newest SEND is dropped with a WARN log and an overflow counter is
+ * incremented. A periodic sweep discards sessions whose buffer has been
+ * held for longer than {@code bufferTimeoutMs} (default 5000ms), preventing
+ * unbounded memory growth from stalled subscriptions.
+ *
+ * <p>Threading: All data structures are lock-free ({@link ConcurrentHashMap},
+ * {@link ArrayDeque}). Buffered SENDs are re-dispatched asynchronously via
  * {@code clientInboundChannel.send()}.
  *
  * <p>This class is intentionally placed in the config package alongside
@@ -55,6 +69,22 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
 
     private static final Logger log =
             LoggerFactory.getLogger(SubscriptionReadinessInterceptor.class);
+
+    // ------------------------------------------------------------
+    // Configuration (injected from application properties)
+    // ------------------------------------------------------------
+
+    /** Maximum number of SEND messages to buffer per session before overflow. */
+    @Value("${chat.subscription-readiness.max-buffered-messages:100}")
+    private int maxBufferedMessages;
+
+    /** Maximum time (ms) a session's SEND buffer is held before stale discard. */
+    @Value("${chat.subscription-readiness.buffer-timeout-ms:5000}")
+    private long bufferTimeoutMs;
+
+    // ------------------------------------------------------------
+    // Internal state
+    // ------------------------------------------------------------
 
     /**
      * Per-session set of subscription IDs with pending registration operations.
@@ -85,14 +115,101 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
 
     /**
      * Per-session buffer of SEND frames held while subscriptions are pending.
-     * Key: STOMP session ID. Value: ordered list of buffered SEND messages.
+     * Key: STOMP session ID. Value: ordered deque of buffered SEND messages.
+     *
+     * <p>Bounded by {@link #maxBufferedMessages}. When full, the newest SEND
+     * is dropped (overflow).
      *
      * <p>Populated in {@link #preSend} when a SEND arrives while the session
      * has pending subscriptions. Released in {@link #afterMessageHandled}
      * when all subscription registrations complete (or discarded on failure).
      */
-    private final ConcurrentHashMap<String, List<Message<?>>> bufferedSends =
+    private final ConcurrentHashMap<String, Deque<Message<?>>> bufferedSends =
             new ConcurrentHashMap<>();
+
+    /**
+     * Per-session timestamp (millis) when the first SEND was buffered.
+     * Used by the periodic sweep to detect and discard stale sessions.
+     *
+     * <p>Set in {@link #bufferSend}. Cleaned up on release, discard, or
+     * session removal.
+     */
+    private final ConcurrentHashMap<String, Long> bufferTimestamps =
+            new ConcurrentHashMap<>();
+
+    // ------------------------------------------------------------
+    // Metrics (simple counters)
+    // ------------------------------------------------------------
+
+    /** Total number of SENDs that were buffered and later released. */
+    private final AtomicLong releasedCount = new AtomicLong(0);
+
+    /** Total number of SENDs discarded due to subscription failure. */
+    private final AtomicLong discardedCount = new AtomicLong(0);
+
+    /** Total number of SENDs dropped due to buffer overflow. */
+    private final AtomicLong overflowCount = new AtomicLong(0);
+
+    /** Total number of sessions discarded by the timeout sweep. */
+    private final AtomicLong staleSweepCount = new AtomicLong(0);
+
+    // ------------------------------------------------------------
+    // Periodic sweep executor
+    // ------------------------------------------------------------
+
+    /**
+     * Single-thread executor for periodic stale-buffer cleanup.
+     * Daemon threads so it does not prevent JVM shutdown.
+     */
+    private final ScheduledExecutorService cleanupExecutor =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "SubReadiness-cleanup");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /**
+     * Package-private constructor for unit testing. Allows callers to set
+     * buffer limits directly without needing a Spring context for {@code @Value}.
+     *
+     * @param maxBufferedMessages maximum SENDs to buffer per session
+     * @param bufferTimeoutMs    maximum time (ms) to hold a buffered session
+     */
+    SubscriptionReadinessInterceptor(int maxBufferedMessages, long bufferTimeoutMs) {
+        this.maxBufferedMessages = maxBufferedMessages;
+        this.bufferTimeoutMs = bufferTimeoutMs;
+        cleanupExecutor.scheduleWithFixedDelay(
+                this::discardStaleSessions,
+                2, 2, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Default constructor for Spring dependency injection.
+     * {@code @Value} fields are injected by Spring after construction.
+     * The periodic sweep is started after field injection completes.
+     */
+    public SubscriptionReadinessInterceptor() {
+        cleanupExecutor.scheduleWithFixedDelay(
+                this::discardStaleSessions,
+                2, 2, TimeUnit.SECONDS);
+    }
+
+    // ------------------------------------------------------------
+    // Lifecycle
+    // ------------------------------------------------------------
+
+    @PreDestroy
+    void shutdown() {
+        cleanupExecutor.shutdownNow();
+        log.info("SubscriptionReadinessInterceptor shutdown. "
+                + "released={} discarded={} overflow={} staleSweep={}",
+                releasedCount.get(), discardedCount.get(),
+                overflowCount.get(), staleSweepCount.get());
+    }
+
+    // ------------------------------------------------------------
+    // Package-private: pending subscription management
+    // ------------------------------------------------------------
 
     /**
      * Records a subscription ID as pending for the given session.
@@ -135,18 +252,39 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
         return pending != null && !pending.isEmpty();
     }
 
+    // ------------------------------------------------------------
+    // Package-private: buffer management
+    // ------------------------------------------------------------
+
     /**
      * Buffers a SEND message for later release.
+     *
+     * <p>If the buffer is full ({@link #maxBufferedMessages} reached), the
+     * newest SEND is dropped (overflow) with a WARN log.
      *
      * @param sessionId the STOMP session ID
      * @param message   the SEND message to buffer
      */
     void bufferSend(String sessionId, Message<?> message) {
-        bufferedSends
-                .computeIfAbsent(sessionId, k -> new CopyOnWriteArrayList<>())
-                .add(message);
-        log.debug("SEND buffered: session={} pendingCount={}",
-                sessionId, bufferedSends.get(sessionId).size());
+        Deque<Message<?>> deque = bufferedSends
+                .computeIfAbsent(sessionId, k -> new ArrayDeque<>());
+
+        if (deque.size() >= maxBufferedMessages) {
+            overflowCount.incrementAndGet();
+            log.warn("SEND buffer overflow: session={} bufferSize={} max={}. "
+                    + "Dropping newest SEND. totalOverflows={}",
+                    sessionId, deque.size(), maxBufferedMessages,
+                    overflowCount.get());
+            return;
+        }
+
+        deque.addLast(message);
+
+        // Record timestamp on first buffer entry for this session
+        bufferTimestamps.putIfAbsent(sessionId, System.currentTimeMillis());
+
+        log.debug("SEND buffered: session={} bufferSize={}",
+                sessionId, deque.size());
     }
 
     /**
@@ -160,14 +298,17 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * @param channel   the {@code clientInboundChannel} to re-dispatch through
      */
     void releaseBufferedSends(String sessionId, MessageChannel channel) {
-        List<Message<?>> sends = bufferedSends.remove(sessionId);
-        if (sends == null || sends.isEmpty()) {
+        Deque<Message<?>> deque = bufferedSends.remove(sessionId);
+        bufferTimestamps.remove(sessionId);
+
+        if (deque == null || deque.isEmpty()) {
             return;
         }
 
-        log.debug("Releasing {} buffered SENDs for session={}", sends.size(), sessionId);
+        int count = deque.size();
+        log.debug("Releasing {} buffered SENDs for session={}", count, sessionId);
 
-        for (Message<?> msg : sends) {
+        for (Message<?> msg : deque) {
             try {
                 channel.send(msg);
             } catch (Exception e) {
@@ -175,6 +316,8 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
                         sessionId, e.getMessage());
             }
         }
+
+        releasedCount.addAndGet(count);
     }
 
     /**
@@ -185,10 +328,15 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * @param sessionId the STOMP session ID
      */
     void discardBufferedSends(String sessionId) {
-        List<Message<?>> removed = bufferedSends.remove(sessionId);
+        Deque<Message<?>> removed = bufferedSends.remove(sessionId);
+        bufferTimestamps.remove(sessionId);
+
         if (removed != null && !removed.isEmpty()) {
-            log.warn("Discarding {} buffered SENDs for session={} (subscription failed)",
-                    removed.size(), sessionId);
+            int count = removed.size();
+            discardedCount.addAndGet(count);
+            log.warn("Discarding {} buffered SENDs for session={} (subscription failed). "
+                    + "totalDiscarded={}",
+                    count, sessionId, discardedCount.get());
         }
     }
 
@@ -200,13 +348,73 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
     void removeSession(String sessionId) {
         pendingSubscriptions.remove(sessionId);
         hasSubscriptionFailure.remove(sessionId);
-        bufferedSends.remove(sessionId);
+
+        Deque<Message<?>> removed = bufferedSends.remove(sessionId);
+        bufferTimestamps.remove(sessionId);
+
+        if (removed != null && !removed.isEmpty()) {
+            discardedCount.addAndGet(removed.size());
+        }
+
         log.debug("Session cleaned up: session={}", sessionId);
     }
 
-    // ----------------------------------------------------------------
+    // ------------------------------------------------------------
+    // Periodic sweep: discard stale buffered sessions
+    // ------------------------------------------------------------
+
+    /**
+     * Discards sessions whose SEND buffer has been held for longer than
+     * {@link #bufferTimeoutMs}. Called periodically by {@link #cleanupExecutor}.
+     *
+     * <p>Prevents unbounded memory growth when a subscription stalls
+     * (e.g., broker never calls {@code afterMessageHandled}).
+     */
+    void discardStaleSessions() {
+        long now = System.currentTimeMillis();
+
+        for (Map.Entry<String, Long> entry : bufferTimestamps.entrySet()) {
+            String sessionId = entry.getKey();
+            long bufferedAt = entry.getValue();
+
+            if (now - bufferedAt > bufferTimeoutMs) {
+                staleSweepCount.incrementAndGet();
+                log.warn("Stale session sweep: discarding buffer for session={} "
+                        + "(held {}ms, timeout={}ms). totalStaleSweeps={}",
+                        sessionId, now - bufferedAt, bufferTimeoutMs,
+                        staleSweepCount.get());
+
+                // Remove pending state and discard buffer
+                pendingSubscriptions.remove(sessionId);
+                hasSubscriptionFailure.remove(sessionId);
+                discardBufferedSends(sessionId);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Package-private: metrics accessors (for testing/monitoring)
+    // ------------------------------------------------------------
+
+    long getReleasedCount() {
+        return releasedCount.get();
+    }
+
+    long getDiscardedCount() {
+        return discardedCount.get();
+    }
+
+    long getOverflowCount() {
+        return overflowCount.get();
+    }
+
+    long getStaleSweepCount() {
+        return staleSweepCount.get();
+    }
+
+    // ------------------------------------------------------------
     // ChannelInterceptor
-    // ----------------------------------------------------------------
+    // ------------------------------------------------------------
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -246,9 +454,9 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
         return message;
     }
 
-    // ----------------------------------------------------------------
+    // ------------------------------------------------------------
     // ExecutorChannelInterceptor
-    // ----------------------------------------------------------------
+    // ------------------------------------------------------------
 
     /**
      * Fires after each handler on the {@code clientInboundChannel} completes
