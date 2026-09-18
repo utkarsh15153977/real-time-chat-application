@@ -9,8 +9,8 @@ public interface NotificationService {
     NotificationResponse createNotification(MessageEvent messageEvent);
     List<NotificationResponse> getAllNotifications(String receiverId);
     List<NotificationResponse> getUnreadNotifications(String receiverId);
-    NotificationResponse markAsRead(Long notificationId);
+    NotificationResponse markAsRead(Long notificationId, String authenticatedUserId);
     void markAllAsRead(String receiverId);
-    void deleteNotification(Long notificationId);
+    void deleteNotification(Long notificationId, String authenticatedUserId);
     long getUnreadCount(String receiverId);
 }
