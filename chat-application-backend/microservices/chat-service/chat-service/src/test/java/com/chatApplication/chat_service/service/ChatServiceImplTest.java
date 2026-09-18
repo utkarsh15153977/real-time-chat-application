@@ -5,6 +5,7 @@ import com.chatApplication.chat_service.dto.ChatResponse;
 import com.chatApplication.chat_service.dto.GroupRequest;
 import com.chatApplication.chat_service.entity.Chat;
 import com.chatApplication.chat_service.entity.ChatMember;
+import com.chatApplication.chat_service.exception.AuthorizationException;
 import com.chatApplication.chat_service.exception.ChatNotFoundException;
 import com.chatApplication.chat_service.exception.DuplicateMemberException;
 import com.chatApplication.chat_service.exception.GroupNotFoundException;
@@ -41,8 +42,8 @@ class ChatServiceImplTest {
 
     private Chat groupChat;
     private Chat privateChat;
-    private ChatMember member1;
-    private ChatMember member2;
+    private ChatMember adminMember;
+    private ChatMember regularMember;
 
     @BeforeEach
     void setUp() {
@@ -64,14 +65,14 @@ class ChatServiceImplTest {
                 .active(true)
                 .build();
 
-        member1 = ChatMember.builder()
+        adminMember = ChatMember.builder()
                 .id(1L)
                 .chatId(1L)
                 .userId(10L)
                 .admin(true)
                 .build();
 
-        member2 = ChatMember.builder()
+        regularMember = ChatMember.builder()
                 .id(2L)
                 .chatId(1L)
                 .userId(20L)
@@ -93,7 +94,7 @@ class ChatServiceImplTest {
             when(chatRepository.findPrivateChatBetween(10L, 20L))
                     .thenReturn(Optional.empty());
             when(chatRepository.save(any(Chat.class))).thenReturn(privateChat);
-            when(chatMemberRepository.save(any(ChatMember.class))).thenReturn(member1);
+            when(chatMemberRepository.save(any(ChatMember.class))).thenReturn(adminMember);
 
             ChatResponse response = chatService.createPrivateChat(request);
 
@@ -138,23 +139,40 @@ class ChatServiceImplTest {
     class CreateGroupChatTests {
 
         @Test
-        @DisplayName("should create group chat with members")
+        @DisplayName("should create group chat with caller as admin")
         void createGroupChat_validRequest_createsGroup() {
             GroupRequest request = new GroupRequest();
             request.setName("New Group");
-            request.setAdminId(10L);
+            request.setAdminId(99L);
             request.setMembers(List.of(10L, 20L, 30L));
             request.setGroupIcon("icon.png");
 
             when(chatRepository.save(any(Chat.class))).thenReturn(groupChat);
-            when(chatMemberRepository.save(any(ChatMember.class))).thenReturn(member1);
+            when(chatMemberRepository.save(any(ChatMember.class))).thenReturn(adminMember);
 
-            ChatResponse response = chatService.createGroupChat(request);
+            ChatResponse response = chatService.createGroupChat(request, 10L);
 
             assertNotNull(response);
             assertEquals(1L, response.getChatId());
             assertTrue(response.getGroup());
             verify(chatMemberRepository, times(3)).save(any(ChatMember.class));
+        }
+
+        @Test
+        @DisplayName("should use callerId as admin, not request body adminId")
+        void createGroupChat_usesCallerIdAsAdmin() {
+            GroupRequest request = new GroupRequest();
+            request.setName("New Group");
+            request.setAdminId(99L);
+            request.setMembers(List.of(10L));
+
+            when(chatRepository.save(any(Chat.class))).thenReturn(groupChat);
+            when(chatMemberRepository.save(any(ChatMember.class))).thenReturn(adminMember);
+
+            chatService.createGroupChat(request, 10L);
+
+            verify(chatRepository).save(argThat(chat ->
+                    chat.getCreatedBy().equals(10L)));
         }
 
         @Test
@@ -166,7 +184,24 @@ class ChatServiceImplTest {
             request.setMembers(List.of(10L));
 
             assertThrows(IllegalArgumentException.class,
-                    () -> chatService.createGroupChat(request));
+                    () -> chatService.createGroupChat(request, 10L));
+        }
+    }
+
+    @Nested
+    @DisplayName("getAllChats")
+    class GetAllChatsTests {
+
+        @Test
+        @DisplayName("should return chats for the specified user")
+        void getAllChats_validUser_returnsChats() {
+            when(chatMemberRepository.findByUserId(10L))
+                    .thenReturn(List.of(adminMember));
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+
+            List<ChatResponse> responses = chatService.getAllChats(10L);
+
+            assertEquals(1, responses.size());
         }
     }
 
@@ -175,26 +210,42 @@ class ChatServiceImplTest {
     class AddGroupMemberTests {
 
         @Test
-        @DisplayName("should add new member to group")
-        void addGroupMember_newMember_addsSuccessfully() {
+        @DisplayName("should add new member when caller is admin")
+        void addGroupMember_callerIsAdmin_addsSuccessfully() {
             when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 10L))
+                    .thenReturn(Optional.of(adminMember));
             when(chatMemberRepository.existsByChatIdAndUserId(1L, 30L)).thenReturn(false);
-            when(chatMemberRepository.save(any(ChatMember.class))).thenReturn(member2);
+            when(chatMemberRepository.save(any(ChatMember.class))).thenReturn(regularMember);
 
-            ChatResponse response = chatService.addGroupMember(1L, 30L);
+            ChatResponse response = chatService.addGroupMember(1L, 30L, 10L);
 
             assertNotNull(response);
             verify(chatMemberRepository).save(any(ChatMember.class));
         }
 
         @Test
+        @DisplayName("should throw when caller is not admin")
+        void addGroupMember_callerNotAdmin_throwsException() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 20L))
+                    .thenReturn(Optional.of(regularMember));
+
+            assertThrows(AuthorizationException.class,
+                    () -> chatService.addGroupMember(1L, 30L, 20L));
+            verify(chatMemberRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("should throw DuplicateMemberException when member exists")
         void addGroupMember_existingMember_throwsException() {
             when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 10L))
+                    .thenReturn(Optional.of(adminMember));
             when(chatMemberRepository.existsByChatIdAndUserId(1L, 20L)).thenReturn(true);
 
             assertThrows(DuplicateMemberException.class,
-                    () -> chatService.addGroupMember(1L, 20L));
+                    () -> chatService.addGroupMember(1L, 20L, 10L));
             verify(chatMemberRepository, never()).save(any());
         }
 
@@ -204,7 +255,7 @@ class ChatServiceImplTest {
             when(chatRepository.findById(2L)).thenReturn(Optional.of(privateChat));
 
             assertThrows(GroupNotFoundException.class,
-                    () -> chatService.addGroupMember(2L, 20L));
+                    () -> chatService.addGroupMember(2L, 20L, 10L));
         }
 
         @Test
@@ -213,7 +264,18 @@ class ChatServiceImplTest {
             when(chatRepository.findById(99L)).thenReturn(Optional.empty());
 
             assertThrows(ChatNotFoundException.class,
-                    () -> chatService.addGroupMember(99L, 20L));
+                    () -> chatService.addGroupMember(99L, 20L, 10L));
+        }
+
+        @Test
+        @DisplayName("should throw when caller is not a member")
+        void addGroupMember_callerNotMember_throwsException() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 99L))
+                    .thenReturn(Optional.empty());
+
+            assertThrows(AuthorizationException.class,
+                    () -> chatService.addGroupMember(1L, 30L, 99L));
         }
     }
 
@@ -222,24 +284,56 @@ class ChatServiceImplTest {
     class RemoveGroupMemberTests {
 
         @Test
-        @DisplayName("should remove existing member")
-        void removeGroupMember_existingMember_removes() {
+        @DisplayName("should remove member when caller is admin")
+        void removeGroupMember_callerIsAdmin_removes() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 10L))
+                    .thenReturn(Optional.of(adminMember));
             when(chatMemberRepository.findByChatIdAndUserId(1L, 20L))
-                    .thenReturn(Optional.of(member2));
+                    .thenReturn(Optional.of(regularMember));
 
-            chatService.removeGroupMember(1L, 20L);
+            chatService.removeGroupMember(1L, 20L, 10L);
 
-            verify(chatMemberRepository).delete(member2);
+            verify(chatMemberRepository).delete(regularMember);
+        }
+
+        @Test
+        @DisplayName("should allow self-removal without admin role")
+        void removeGroupMember_selfRemoval_removes() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 20L))
+                    .thenReturn(Optional.of(regularMember));
+
+            chatService.removeGroupMember(1L, 20L, 20L);
+
+            verify(chatMemberRepository).delete(regularMember);
+        }
+
+        @Test
+        @DisplayName("should throw when caller is not admin and not self")
+        void removeGroupMember_callerNotAdmin_throwsException() {
+            ChatMember otherMember = ChatMember.builder()
+                    .id(3L).chatId(1L).userId(30L).admin(false).build();
+
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 30L))
+                    .thenReturn(Optional.of(otherMember));
+
+            assertThrows(AuthorizationException.class,
+                    () -> chatService.removeGroupMember(1L, 20L, 30L));
         }
 
         @Test
         @DisplayName("should throw when member not found")
         void removeGroupMember_memberNotFound_throwsException() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 10L))
+                    .thenReturn(Optional.of(adminMember));
             when(chatMemberRepository.findByChatIdAndUserId(1L, 99L))
                     .thenReturn(Optional.empty());
 
             assertThrows(MemberNotFoundException.class,
-                    () -> chatService.removeGroupMember(1L, 99L));
+                    () -> chatService.removeGroupMember(1L, 99L, 10L));
         }
     }
 
@@ -250,22 +344,36 @@ class ChatServiceImplTest {
         @Test
         @DisplayName("should allow member to leave group")
         void leaveGroup_existingMember_leaves() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
             when(chatMemberRepository.findByChatIdAndUserId(1L, 20L))
-                    .thenReturn(Optional.of(member2));
+                    .thenReturn(Optional.of(regularMember));
+            when(chatMemberRepository.existsByChatIdAndUserId(1L, 20L)).thenReturn(true);
 
             chatService.leaveGroup(1L, 20L);
 
-            verify(chatMemberRepository).delete(member2);
+            verify(chatMemberRepository).delete(regularMember);
+        }
+
+        @Test
+        @DisplayName("should throw when caller is not a member")
+        void leaveGroup_notMember_throwsException() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.existsByChatIdAndUserId(1L, 99L)).thenReturn(false);
+
+            assertThrows(AuthorizationException.class,
+                    () -> chatService.leaveGroup(1L, 99L));
         }
 
         @Test
         @DisplayName("should throw when member not in group")
         void leaveGroup_memberNotFound_throwsException() {
-            when(chatMemberRepository.findByChatIdAndUserId(1L, 99L))
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.existsByChatIdAndUserId(1L, 20L)).thenReturn(true);
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 20L))
                     .thenReturn(Optional.empty());
 
             assertThrows(MemberNotFoundException.class,
-                    () -> chatService.leaveGroup(1L, 99L));
+                    () -> chatService.leaveGroup(1L, 20L));
         }
     }
 
@@ -274,24 +382,39 @@ class ChatServiceImplTest {
     class RenameGroupTests {
 
         @Test
-        @DisplayName("should rename group")
-        void renameGroup_validName_renames() {
+        @DisplayName("should rename group when caller is admin")
+        void renameGroup_callerIsAdmin_renames() {
             when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 10L))
+                    .thenReturn(Optional.of(adminMember));
             when(chatRepository.save(any(Chat.class))).thenReturn(groupChat);
 
-            ChatResponse response = chatService.renameGroup(1L, "New Name");
+            ChatResponse response = chatService.renameGroup(1L, "New Name", 10L);
 
             assertNotNull(response);
             assertEquals("New Name", groupChat.getName());
         }
 
         @Test
+        @DisplayName("should throw when caller is not admin")
+        void renameGroup_callerNotAdmin_throwsException() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 20L))
+                    .thenReturn(Optional.of(regularMember));
+
+            assertThrows(AuthorizationException.class,
+                    () -> chatService.renameGroup(1L, "New Name", 20L));
+        }
+
+        @Test
         @DisplayName("should throw for blank name")
         void renameGroup_blankName_throwsException() {
             when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.findByChatIdAndUserId(1L, 10L))
+                    .thenReturn(Optional.of(adminMember));
 
             assertThrows(IllegalArgumentException.class,
-                    () -> chatService.renameGroup(1L, "  "));
+                    () -> chatService.renameGroup(1L, "  ", 10L));
         }
 
         @Test
@@ -300,7 +423,7 @@ class ChatServiceImplTest {
             when(chatRepository.findById(2L)).thenReturn(Optional.of(privateChat));
 
             assertThrows(GroupNotFoundException.class,
-                    () -> chatService.renameGroup(2L, "New Name"));
+                    () -> chatService.renameGroup(2L, "New Name", 10L));
         }
     }
 
@@ -309,16 +432,27 @@ class ChatServiceImplTest {
     class GetGroupMembersTests {
 
         @Test
-        @DisplayName("should return list of member IDs")
-        void getGroupMembers_validGroup_returnsList() {
+        @DisplayName("should return list of member IDs when caller is member")
+        void getGroupMembers_callerIsMember_returnsList() {
             when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
-            when(chatMemberRepository.findByChatId(1L)).thenReturn(List.of(member1, member2));
+            when(chatMemberRepository.existsByChatIdAndUserId(1L, 10L)).thenReturn(true);
+            when(chatMemberRepository.findByChatId(1L)).thenReturn(List.of(adminMember, regularMember));
 
-            List<Long> members = chatService.getGroupMembers(1L);
+            List<Long> members = chatService.getGroupMembers(1L, 10L);
 
             assertEquals(2, members.size());
             assertTrue(members.contains(10L));
             assertTrue(members.contains(20L));
+        }
+
+        @Test
+        @DisplayName("should throw when caller is not a member")
+        void getGroupMembers_callerNotMember_throwsException() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+            when(chatMemberRepository.existsByChatIdAndUserId(1L, 99L)).thenReturn(false);
+
+            assertThrows(AuthorizationException.class,
+                    () -> chatService.getGroupMembers(1L, 99L));
         }
 
         @Test
@@ -327,7 +461,7 @@ class ChatServiceImplTest {
             when(chatRepository.findById(2L)).thenReturn(Optional.of(privateChat));
 
             assertThrows(GroupNotFoundException.class,
-                    () -> chatService.getGroupMembers(2L));
+                    () -> chatService.getGroupMembers(2L, 10L));
         }
     }
 
@@ -336,15 +470,24 @@ class ChatServiceImplTest {
     class DeleteGroupTests {
 
         @Test
-        @DisplayName("should delete group and all members")
-        void deleteGroup_validGroup_deletes() {
+        @DisplayName("should delete group when caller is creator")
+        void deleteGroup_callerIsCreator_deletes() {
             when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
-            when(chatMemberRepository.findByChatId(1L)).thenReturn(List.of(member1, member2));
+            when(chatMemberRepository.findByChatId(1L)).thenReturn(List.of(adminMember, regularMember));
 
-            chatService.deleteGroup(1L);
+            chatService.deleteGroup(1L, 10L);
 
-            verify(chatMemberRepository).deleteAll(List.of(member1, member2));
+            verify(chatMemberRepository).deleteAll(List.of(adminMember, regularMember));
             verify(chatRepository).delete(groupChat);
+        }
+
+        @Test
+        @DisplayName("should throw when caller is not creator")
+        void deleteGroup_callerNotCreator_throwsException() {
+            when(chatRepository.findById(1L)).thenReturn(Optional.of(groupChat));
+
+            assertThrows(AuthorizationException.class,
+                    () -> chatService.deleteGroup(1L, 20L));
         }
 
         @Test
@@ -353,7 +496,7 @@ class ChatServiceImplTest {
             when(chatRepository.findById(2L)).thenReturn(Optional.of(privateChat));
 
             assertThrows(GroupNotFoundException.class,
-                    () -> chatService.deleteGroup(2L));
+                    () -> chatService.deleteGroup(2L, 10L));
         }
     }
 }

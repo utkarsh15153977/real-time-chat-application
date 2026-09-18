@@ -65,6 +65,6 @@ public class MessageServiceTest {
             messageService.sendMessage(1L, "Hello", 10L);
         });
 
-        assertEquals("Sender not found", exception.getMessage());
+        assertEquals("User not found", exception.getMessage());
     }
 }
