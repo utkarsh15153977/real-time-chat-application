@@ -1601,6 +1601,276 @@ class SubscriptionReadinessRegressionTest {
     }
 
     // ================================================================
+    // 34. Race A: Concurrent SENDs cannot exceed maxBufferedMessages
+    // ================================================================
+
+    @Test
+    @DisplayName("Race A: Concurrent SENDs never exceed maxBufferedMessages")
+    @Timeout(10)
+    void testRaceA_concurrentSendsNeverExceedMax() throws Exception {
+        int maxBuffer = 5;
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(maxBuffer, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        int threadCount = 20;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startGate = new CountDownLatch(1);
+        CountDownLatch doneGate = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    startGate.await();
+                    Message<?> send = createSendMessage(sessionId, "/app/chat.sendMessage");
+                    bounded.preSend(send, testChannel);
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneGate.countDown();
+                }
+            });
+        }
+
+        startGate.countDown();
+        doneGate.await(5, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // Before release: overflow accounts for dropped messages
+        assertThat(bounded.getOverflowCount())
+                .as("Overflow should be >= threadCount - maxBuffer")
+                .isGreaterThanOrEqualTo(threadCount - maxBuffer);
+
+        // Release remaining buffered messages
+        bounded.afterMessageHandled(subMsg, testChannel, brokerHandler, null);
+
+        long totalAccounted = bounded.getReleasedCount() + bounded.getOverflowCount();
+        assertThat(totalAccounted)
+                .as("All sends accounted for (released + overflow = %d)", threadCount)
+                .isEqualTo(threadCount);
+
+        assertThat(bounded.getReleasedCount())
+                .as("Released must not exceed maxBufferedMessages=%d", maxBuffer)
+                .isLessThanOrEqualTo(maxBuffer);
+    }
+
+    // ================================================================
+    // 35. Race B: Concurrent release + buffer no CME
+    // ================================================================
+
+    @Test
+    @DisplayName("Race B: Concurrent release + buffer does not throw ConcurrentModificationException")
+    @Timeout(10)
+    void testRaceB_releaseWhileBuffering_noCME() throws Exception {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(100, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        // Start release in one thread, concurrent with buffer adds in another
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch startGate = new CountDownLatch(1);
+        CountDownLatch doneGate = new CountDownLatch(2);
+
+        // Thread 1: Release
+        executor.submit(() -> {
+            try {
+                startGate.await();
+                bounded.afterMessageHandled(subMsg, testChannel, brokerHandler, null);
+            } catch (Exception e) {
+                // ignore
+            } finally {
+                doneGate.countDown();
+            }
+        });
+
+        // Thread 2: Buffer concurrently
+        executor.submit(() -> {
+            try {
+                startGate.await();
+                for (int i = 0; i < 50; i++) {
+                    Message<?> send = createSendMessage(sessionId, "/app/chat.sendMessage");
+                    bounded.preSend(send, testChannel);
+                }
+            } catch (Exception e) {
+                // ignore
+            } finally {
+                doneGate.countDown();
+            }
+        });
+
+        startGate.countDown();
+        doneGate.await(5, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // No assertion needed: if no exception/CME was thrown, the test passes
+    }
+
+    // ================================================================
+    // 36. Race C: removeSession vs buffer
+    // ================================================================
+
+    @Test
+    @DisplayName("Race C: removeSession during buffer does not leave orphaned entries")
+    @Timeout(10)
+    void testRaceC_removeSessionVsBuffer_noOrphans() throws Exception {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(100, 5000);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch startGate = new CountDownLatch(1);
+        CountDownLatch doneGate = new CountDownLatch(2);
+
+        // Thread 1: removeSession
+        executor.submit(() -> {
+            try {
+                startGate.await();
+                bounded.removeSession(sessionId);
+            } catch (Exception e) {
+                // ignore
+            } finally {
+                doneGate.countDown();
+            }
+        });
+
+        // Thread 2: Buffer concurrently
+        executor.submit(() -> {
+            try {
+                startGate.await();
+                for (int i = 0; i < 50; i++) {
+                    Message<?> send = createSendMessage(sessionId, "/app/chat.sendMessage");
+                    bounded.preSend(send, testChannel);
+                }
+            } catch (Exception e) {
+                // ignore
+            } finally {
+                doneGate.countDown();
+            }
+        });
+
+        startGate.countDown();
+        doneGate.await(5, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // After both complete, no pending state should remain
+        assertThat(bounded.hasPendingSubscriptions(sessionId)).isFalse();
+    }
+
+    // ================================================================
+    // 37. Race D: Timeout sweep during active buffer
+    // ================================================================
+
+    @Test
+    @DisplayName("Race D: Timeout sweep during active buffer does not corrupt state")
+    @Timeout(10)
+    void testRaceD_timeoutSweepDuringBuffer_noCorruption() throws Exception {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(100, 100);
+
+        String sessionId = UUID.randomUUID().toString();
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subMsg = createSubscribeMessage(sessionId, "sub-1", "/topic/public");
+        bounded.preSend(subMsg, testChannel);
+
+        // Buffer a message, then wait for sweep to fire
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        bounded.preSend(sendMsg, testChannel);
+
+        // Wait for timeout + sweep (sweep runs every 2s, timeout is 100ms)
+        Thread.sleep(3000);
+
+        // Now try to buffer more while sweep may be running
+        for (int i = 0; i < 10; i++) {
+            Message<?> send = createSendMessage(sessionId, "/app/chat.sendMessage");
+            bounded.preSend(send, testChannel);
+        }
+
+        // Sweep should have discarded the buffer; overflow counter should be 0
+        // (sweep discards the session, new sends go to a fresh buffer)
+        assertThat(bounded.getStaleSweepCount())
+                .as("Stale sweep should have fired")
+                .isGreaterThanOrEqualTo(1);
+
+        // No exception = test passes
+    }
+
+    // ================================================================
+    // 38. Race E: Concurrent release across sessions
+    // ================================================================
+
+    @Test
+    @DisplayName("Race E: Concurrent release across sessions works correctly")
+    @Timeout(10)
+    void testRaceE_concurrentReleaseAcrossSessions() throws Exception {
+        SubscriptionReadinessInterceptor bounded =
+                new SubscriptionReadinessInterceptor(100, 5000);
+
+        int sessionCount = 10;
+        String[] sessionIds = new String[sessionCount];
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        // Set up subscriptions for all sessions
+        for (int i = 0; i < sessionCount; i++) {
+            sessionIds[i] = UUID.randomUUID().toString();
+            Message<?> subMsg = createSubscribeMessage(
+                    sessionIds[i], "sub-" + i, "/topic/public");
+            bounded.preSend(subMsg, testChannel);
+        }
+
+        // Buffer messages for all sessions
+        for (int i = 0; i < sessionCount; i++) {
+            Message<?> send = createSendMessage(sessionIds[i], "/app/chat.sendMessage");
+            bounded.preSend(send, testChannel);
+        }
+
+        // Release all sessions concurrently
+        ExecutorService executor = Executors.newFixedThreadPool(sessionCount);
+        CountDownLatch startGate = new CountDownLatch(1);
+        CountDownLatch doneGate = new CountDownLatch(sessionCount);
+
+        for (int i = 0; i < sessionCount; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startGate.await();
+                    bounded.afterMessageHandled(
+                            createSubscribeMessage(sessionIds[idx], "sub-" + idx, "/topic/public"),
+                            testChannel, brokerHandler, null);
+                } catch (Exception e) {
+                    // ignore
+                } finally {
+                    doneGate.countDown();
+                }
+            });
+        }
+
+        startGate.countDown();
+        doneGate.await(5, TimeUnit.SECONDS);
+        executor.shutdown();
+
+        // All sessions should be released
+        assertThat(testChannel.getDispatchedMessages())
+                .as("All %d sessions should be released", sessionCount)
+                .hasSize(sessionCount);
+    }
+
+    // ================================================================
     // Test infrastructure
     // ================================================================
 

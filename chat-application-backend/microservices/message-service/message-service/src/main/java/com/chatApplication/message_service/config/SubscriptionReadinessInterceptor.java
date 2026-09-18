@@ -53,9 +53,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * held for longer than {@code bufferTimeoutMs} (default 5000ms), preventing
  * unbounded memory growth from stalled subscriptions.
  *
- * <p>Threading: All data structures are lock-free ({@link ConcurrentHashMap},
- * {@link ArrayDeque}). Buffered SENDs are re-dispatched asynchronously via
- * {@code clientInboundChannel.send()}.
+ * <p>Threading: Outer maps ({@link ConcurrentHashMap}) are thread-safe.
+ * Per-session {@link ArrayDeque} buffers are protected by per-session locks
+ * ({@link #getOrCreateLock(String)}) to prevent concurrent modification.
+ * This ensures the hard invariant: buffered message count &lt;= maxBufferedMessages
+ * for every session, atomically enforced.
  *
  * <p>This class is intentionally placed in the config package alongside
  * {@link WebSocketAuthInterceptor} and is registered on the
@@ -123,6 +125,10 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * <p>Populated in {@link #preSend} when a SEND arrives while the session
      * has pending subscriptions. Released in {@link #afterMessageHandled}
      * when all subscription registrations complete (or discarded on failure).
+     *
+     * <p>Access to each session's deque is synchronized via
+     * {@link #getOrCreateLock(String)} to prevent concurrent modification
+     * of the non-thread-safe {@link ArrayDeque}.
      */
     private final ConcurrentHashMap<String, Deque<Message<?>>> bufferedSends =
             new ConcurrentHashMap<>();
@@ -135,6 +141,17 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * session removal.
      */
     private final ConcurrentHashMap<String, Long> bufferTimestamps =
+            new ConcurrentHashMap<>();
+
+    /**
+     * Per-session lock objects for synchronizing buffer operations.
+     * Key: STOMP session ID. Value: lock object (one per session).
+     *
+     * <p>Prevents Race A (overflow), Race B (release vs buffer),
+     * Race C (removeSession vs buffer), Race D (cleanup vs buffer),
+     * and Race E (timeout vs release).
+     */
+    private final ConcurrentHashMap<String, Object> sessionLocks =
             new ConcurrentHashMap<>();
 
     // ------------------------------------------------------------
@@ -253,6 +270,23 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
     }
 
     // ------------------------------------------------------------
+    // Package-private: per-session lock
+    // ------------------------------------------------------------
+
+    /**
+     * Returns the lock object for the given session, creating one if absent.
+     * The lock is used to synchronize all buffer operations for a session,
+     * preventing concurrent modification of the non-thread-safe
+     * {@link ArrayDeque}.
+     *
+     * @param sessionId the STOMP session ID
+     * @return a non-null lock object for this session
+     */
+    private Object getOrCreateLock(String sessionId) {
+        return sessionLocks.computeIfAbsent(sessionId, k -> new Object());
+    }
+
+    // ------------------------------------------------------------
     // Package-private: buffer management
     // ------------------------------------------------------------
 
@@ -266,25 +300,27 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * @param message   the SEND message to buffer
      */
     void bufferSend(String sessionId, Message<?> message) {
-        Deque<Message<?>> deque = bufferedSends
-                .computeIfAbsent(sessionId, k -> new ArrayDeque<>());
+        synchronized (getOrCreateLock(sessionId)) {
+            Deque<Message<?>> deque = bufferedSends
+                    .computeIfAbsent(sessionId, k -> new ArrayDeque<>());
 
-        if (deque.size() >= maxBufferedMessages) {
-            overflowCount.incrementAndGet();
-            log.warn("SEND buffer overflow: session={} bufferSize={} max={}. "
-                    + "Dropping newest SEND. totalOverflows={}",
-                    sessionId, deque.size(), maxBufferedMessages,
-                    overflowCount.get());
-            return;
+            if (deque.size() >= maxBufferedMessages) {
+                overflowCount.incrementAndGet();
+                log.warn("SEND buffer overflow: session={} bufferSize={} max={}. "
+                        + "Dropping newest SEND. totalOverflows={}",
+                        sessionId, deque.size(), maxBufferedMessages,
+                        overflowCount.get());
+                return;
+            }
+
+            deque.addLast(message);
+
+            // Record timestamp on first buffer entry for this session
+            bufferTimestamps.putIfAbsent(sessionId, System.currentTimeMillis());
+
+            log.debug("SEND buffered: session={} bufferSize={}",
+                    sessionId, deque.size());
         }
-
-        deque.addLast(message);
-
-        // Record timestamp on first buffer entry for this session
-        bufferTimestamps.putIfAbsent(sessionId, System.currentTimeMillis());
-
-        log.debug("SEND buffered: session={} bufferSize={}",
-                sessionId, deque.size());
     }
 
     /**
@@ -298,14 +334,20 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * @param channel   the {@code clientInboundChannel} to re-dispatch through
      */
     void releaseBufferedSends(String sessionId, MessageChannel channel) {
-        Deque<Message<?>> deque = bufferedSends.remove(sessionId);
-        bufferTimestamps.remove(sessionId);
+        Deque<Message<?>> deque;
+        int count;
 
-        if (deque == null || deque.isEmpty()) {
-            return;
+        synchronized (getOrCreateLock(sessionId)) {
+            deque = bufferedSends.remove(sessionId);
+            bufferTimestamps.remove(sessionId);
+
+            if (deque == null || deque.isEmpty()) {
+                return;
+            }
+
+            count = deque.size();
         }
 
-        int count = deque.size();
         log.debug("Releasing {} buffered SENDs for session={}", count, sessionId);
 
         for (Message<?> msg : deque) {
@@ -328,15 +370,17 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
      * @param sessionId the STOMP session ID
      */
     void discardBufferedSends(String sessionId) {
-        Deque<Message<?>> removed = bufferedSends.remove(sessionId);
-        bufferTimestamps.remove(sessionId);
+        synchronized (getOrCreateLock(sessionId)) {
+            Deque<Message<?>> removed = bufferedSends.remove(sessionId);
+            bufferTimestamps.remove(sessionId);
 
-        if (removed != null && !removed.isEmpty()) {
-            int count = removed.size();
-            discardedCount.addAndGet(count);
-            log.warn("Discarding {} buffered SENDs for session={} (subscription failed). "
-                    + "totalDiscarded={}",
-                    count, sessionId, discardedCount.get());
+            if (removed != null && !removed.isEmpty()) {
+                int count = removed.size();
+                discardedCount.addAndGet(count);
+                log.warn("Discarding {} buffered SENDs for session={} (subscription failed). "
+                        + "totalDiscarded={}",
+                        count, sessionId, discardedCount.get());
+            }
         }
     }
 
@@ -349,11 +393,13 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
         pendingSubscriptions.remove(sessionId);
         hasSubscriptionFailure.remove(sessionId);
 
-        Deque<Message<?>> removed = bufferedSends.remove(sessionId);
-        bufferTimestamps.remove(sessionId);
+        synchronized (getOrCreateLock(sessionId)) {
+            Deque<Message<?>> removed = bufferedSends.remove(sessionId);
+            bufferTimestamps.remove(sessionId);
 
-        if (removed != null && !removed.isEmpty()) {
-            discardedCount.addAndGet(removed.size());
+            if (removed != null && !removed.isEmpty()) {
+                discardedCount.addAndGet(removed.size());
+            }
         }
 
         log.debug("Session cleaned up: session={}", sessionId);
@@ -378,16 +424,18 @@ public class SubscriptionReadinessInterceptor implements ExecutorChannelIntercep
             long bufferedAt = entry.getValue();
 
             if (now - bufferedAt > bufferTimeoutMs) {
-                staleSweepCount.incrementAndGet();
-                log.warn("Stale session sweep: discarding buffer for session={} "
-                        + "(held {}ms, timeout={}ms). totalStaleSweeps={}",
-                        sessionId, now - bufferedAt, bufferTimeoutMs,
-                        staleSweepCount.get());
+                synchronized (getOrCreateLock(sessionId)) {
+                    staleSweepCount.incrementAndGet();
+                    log.warn("Stale session sweep: discarding buffer for session={} "
+                            + "(held {}ms, timeout={}ms). totalStaleSweeps={}",
+                            sessionId, now - bufferedAt, bufferTimeoutMs,
+                            staleSweepCount.get());
 
-                // Remove pending state and discard buffer
-                pendingSubscriptions.remove(sessionId);
-                hasSubscriptionFailure.remove(sessionId);
-                discardBufferedSends(sessionId);
+                    // Remove pending state and discard buffer
+                    pendingSubscriptions.remove(sessionId);
+                    hasSubscriptionFailure.remove(sessionId);
+                    discardBufferedSends(sessionId);
+                }
             }
         }
     }
