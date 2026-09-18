@@ -71,6 +71,20 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles authorization failures (403 Forbidden).
+     */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(
+            ForbiddenException ex) {
+
+        log.warn("Authorization denied: {}", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(buildErrorResponse(HttpStatus.FORBIDDEN.value(), ex.getMessage()));
+    }
+
+    /**
      * Handles S3 service errors (connectivity, permissions, etc.).
      */
     @ExceptionHandler(S3ServiceException.class)
