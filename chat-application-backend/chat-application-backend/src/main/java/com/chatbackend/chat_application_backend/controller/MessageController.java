@@ -2,10 +2,14 @@ package com.chatbackend.chat_application_backend.controller;
 
 import com.chatbackend.chat_application_backend.dto.MessageRequest;
 import com.chatbackend.chat_application_backend.dto.MessageResponse;
+import com.chatbackend.chat_application_backend.entity.User;
 import com.chatbackend.chat_application_backend.mapper.MessageMapper;
+import com.chatbackend.chat_application_backend.repository.UserRepository;
 import com.chatbackend.chat_application_backend.service.MessageService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,17 +19,24 @@ import java.util.Map;
 @RequestMapping("/api/messages")
 public class MessageController {
     private final MessageService messageService;
+    private final UserRepository userRepository;
 
-    public MessageController(MessageService messageService) {
+    public MessageController(MessageService messageService, UserRepository userRepository) {
         this.messageService = messageService;
+        this.userRepository = userRepository;
     }
 
     // Sending messages API
     @PostMapping
     public ResponseEntity<MessageResponse> sendMessage(@Valid @RequestBody MessageRequest req) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        User authenticatedUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+
         return ResponseEntity.ok(
                 MessageMapper.toMessageResponseDTO(
-                        messageService.sendMessage(req.getSenderId(), req.getContent(), req.getChatRoomId())
+                        messageService.sendMessage(authenticatedUser.getId(), req.getContent(), req.getChatRoomId())
                 )
         );
     }

@@ -4,6 +4,7 @@ import com.chatApplication.message_service.dto.AttachmentRequest;
 import com.chatApplication.message_service.dto.MessageRequest;
 import com.chatApplication.message_service.dto.MessageResponse;
 import com.chatApplication.message_service.service.MessageService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,14 @@ public class MessageController {
 
     @PostMapping
     public ResponseEntity<MessageResponse> sendMessage(
-            @RequestBody MessageRequest request) {
+            @RequestBody MessageRequest request,
+            HttpServletRequest httpRequest) {
+
+        String authenticatedUserId = httpRequest.getHeader("X-User-Id");
+        if (authenticatedUserId == null || authenticatedUserId.isBlank()) {
+            return ResponseEntity.status(401).build();
+        }
+        request.setSenderId(authenticatedUserId);
 
         return ResponseEntity.ok(
                 messageService.sendMessage(request));
@@ -128,13 +136,18 @@ public class MessageController {
             value = "/attachment",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse> sendAttachment(
-            @RequestParam String senderId,
             @RequestParam String receiverId,
-            @RequestPart MultipartFile file) {
+            @RequestPart MultipartFile file,
+            HttpServletRequest httpRequest) {
+
+        String authenticatedUserId = httpRequest.getHeader("X-User-Id");
+        if (authenticatedUserId == null || authenticatedUserId.isBlank()) {
+            return ResponseEntity.status(401).build();
+        }
 
         AttachmentRequest request =
                 AttachmentRequest.builder()
-                        .senderId(senderId)
+                        .senderId(authenticatedUserId)
                         .receiverId(receiverId)
                         .file(file)
                         .build();

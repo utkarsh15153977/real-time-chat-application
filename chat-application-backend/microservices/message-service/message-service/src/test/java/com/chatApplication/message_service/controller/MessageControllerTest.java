@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -59,10 +60,10 @@ class MessageControllerTest {
     class SendMessageTests {
 
         @Test
-        @DisplayName("should send message")
+        @DisplayName("should send message using authenticated user ID from X-User-Id header")
         void sendMessage_validRequest_returns200() throws Exception {
             MessageRequest request = new MessageRequest();
-            request.setSenderId("user1");
+            request.setSenderId("attacker");
             request.setReceiverId("user2");
             request.setMessage("Hello World");
 
@@ -71,11 +72,124 @@ class MessageControllerTest {
 
             mockMvc.perform(post("/api/messages")
                     .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-User-Id", "user1")
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.msgId").value(1))
                     .andExpect(jsonPath("$.senderId").value("user1"))
                     .andExpect(jsonPath("$.content").value("Hello World"));
+
+            verify(messageService).sendMessage(argThat(req ->
+                    req.getSenderId().equals("user1")));
+        }
+
+        @Test
+        @DisplayName("should override client-provided senderId with authenticated user ID")
+        void sendMessage_senderIdOverride_preventsImpersonation() throws Exception {
+            MessageRequest request = new MessageRequest();
+            request.setSenderId("user2");
+            request.setReceiverId("user3");
+            request.setMessage("Impersonated message");
+
+            MessageResponse impersonatedResponse = MessageResponse.builder()
+                    .msgId(2L)
+                    .senderId("user1")
+                    .receiverId("user3")
+                    .content("Impersonated message")
+                    .status(MessageStatus.SENT)
+                    .sendTime(LocalDateTime.now())
+                    .build();
+
+            when(messageService.sendMessage(any(MessageRequest.class)))
+                    .thenReturn(impersonatedResponse);
+
+            mockMvc.perform(post("/api/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-User-Id", "user1")
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.senderId").value("user1"));
+
+            verify(messageService).sendMessage(argThat(req ->
+                    req.getSenderId().equals("user1")
+                            && !req.getSenderId().equals("user2")));
+        }
+
+        @Test
+        @DisplayName("should return 401 when X-User-Id header is missing")
+        void sendMessage_noAuthHeader_returns401() throws Exception {
+            MessageRequest request = new MessageRequest();
+            request.setSenderId("user1");
+            request.setReceiverId("user2");
+            request.setMessage("Hello World");
+
+            mockMvc.perform(post("/api/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(messageService);
+        }
+
+        @Test
+        @DisplayName("should return 401 when X-User-Id header is blank")
+        void sendMessage_blankAuthHeader_returns401() throws Exception {
+            MessageRequest request = new MessageRequest();
+            request.setSenderId("user1");
+            request.setReceiverId("user2");
+            request.setMessage("Hello World");
+
+            mockMvc.perform(post("/api/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-User-Id", "  ")
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(messageService);
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/messages/attachment")
+    class SendAttachmentTests {
+
+        @Test
+        @DisplayName("should use authenticated user ID as sender for attachments")
+        void sendAttachment_validRequest_usesHeaderUserId() throws Exception {
+            MockMultipartFile file = new MockMultipartFile(
+                    "file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test".getBytes());
+
+            when(messageService.sendAttachment(any(AttachmentRequest.class)))
+                    .thenReturn(messageResponse);
+
+            mockMvc.perform(multipart("/api/messages/attachment")
+                    .file(file)
+                    .param("receiverId", "user2")
+                    .header("X-User-Id", "user1"))
+                    .andExpect(status().isOk());
+
+            verify(messageService).sendAttachment(argThat(req ->
+                    req.getSenderId().equals("user1")));
+        }
+
+        @Test
+        @DisplayName("should override client senderId in attachment with authenticated user ID")
+        void sendAttachment_senderIdOverride_preventsImpersonation() throws Exception {
+            MockMultipartFile file = new MockMultipartFile(
+                    "file", "test.jpg", MediaType.IMAGE_JPEG_VALUE, "test".getBytes());
+
+            when(messageService.sendAttachment(any(AttachmentRequest.class)))
+                    .thenReturn(messageResponse);
+
+            mockMvc.perform(multipart("/api/messages/attachment")
+                    .file(file)
+                    .param("senderId", "attacker")
+                    .param("receiverId", "user2")
+                    .header("X-User-Id", "user1"))
+                    .andExpect(status().isOk());
+
+            verify(messageService).sendAttachment(argThat(req ->
+                    req.getSenderId().equals("user1")));
         }
     }
 
