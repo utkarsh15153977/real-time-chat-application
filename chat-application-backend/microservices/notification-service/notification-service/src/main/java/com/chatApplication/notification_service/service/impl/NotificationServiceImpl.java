@@ -5,6 +5,7 @@ import com.chatApplication.notification_service.dto.NotificationEvent;
 import com.chatApplication.notification_service.dto.NotificationResponse;
 import com.chatApplication.notification_service.entity.Notification;
 import com.chatApplication.notification_service.entity.NotificationType;
+import com.chatApplication.notification_service.exception.AccessDeniedException;
 import com.chatApplication.notification_service.exception.NotificationNotFoundException;
 import com.chatApplication.notification_service.kafka.NotificationProducer;
 import com.chatApplication.notification_service.mapper.NotificationMapper;
@@ -116,12 +117,17 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public NotificationResponse markAsRead(Long notificationId) {
+    public NotificationResponse markAsRead(Long notificationId, String authenticatedUserId) {
 
         Notification notification = repository.findById(notificationId)
                 .orElseThrow(() ->
                         new NotificationNotFoundException(
                                 "Notification not found with id : " + notificationId));
+
+        if (!notification.getReceiverId().equals(authenticatedUserId)) {
+            throw new AccessDeniedException(
+                    "You do not have permission to modify this notification");
+        }
 
         notification.setReadStatus(true);
 
@@ -142,12 +148,17 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void deleteNotification(Long notificationId) {
+    public void deleteNotification(Long notificationId, String authenticatedUserId) {
 
         Notification notification = repository.findById(notificationId)
                 .orElseThrow(() ->
                         new NotificationNotFoundException(
                                 "Notification not found with id : " + notificationId));
+
+        if (!notification.getReceiverId().equals(authenticatedUserId)) {
+            throw new AccessDeniedException(
+                    "You do not have permission to delete this notification");
+        }
 
         repository.delete(notification);
     }

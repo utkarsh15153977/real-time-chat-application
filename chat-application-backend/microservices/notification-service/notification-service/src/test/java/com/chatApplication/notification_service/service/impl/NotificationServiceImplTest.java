@@ -5,6 +5,7 @@ import com.chatApplication.notification_service.dto.NotificationEvent;
 import com.chatApplication.notification_service.dto.NotificationResponse;
 import com.chatApplication.notification_service.entity.Notification;
 import com.chatApplication.notification_service.entity.NotificationType;
+import com.chatApplication.notification_service.exception.AccessDeniedException;
 import com.chatApplication.notification_service.exception.NotificationNotFoundException;
 import com.chatApplication.notification_service.kafka.NotificationProducer;
 import com.chatApplication.notification_service.mapper.NotificationMapper;
@@ -134,7 +135,7 @@ class NotificationServiceImplTest {
         when(repository.save(any(Notification.class))).thenReturn(notification);
         when(mapper.toResponse(any(Notification.class))).thenReturn(notificationResponse);
 
-        NotificationResponse result = notificationService.markAsRead(1L);
+        NotificationResponse result = notificationService.markAsRead(1L, "user-2");
 
         assertNotNull(result);
         verify(repository).save(any(Notification.class));
@@ -145,7 +146,17 @@ class NotificationServiceImplTest {
         when(repository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(NotificationNotFoundException.class,
-                () -> notificationService.markAsRead(999L));
+                () -> notificationService.markAsRead(999L, "user-2"));
+    }
+
+    @Test
+    void markAsRead_whenNotOwner_shouldThrowAccessDenied() {
+        when(repository.findById(1L)).thenReturn(Optional.of(notification));
+
+        assertThrows(AccessDeniedException.class,
+                () -> notificationService.markAsRead(1L, "user-999"));
+
+        verify(repository, never()).save(any(Notification.class));
     }
 
     @Test
@@ -161,11 +172,21 @@ class NotificationServiceImplTest {
     }
 
     @Test
+    void markAllAsRead_whenNoUnread_shouldNotModifyAnyNotifications() {
+        when(repository.findByReceiverIdAndReadStatusFalseOrderByCreatedAtDesc("user-2"))
+                .thenReturn(List.of());
+
+        notificationService.markAllAsRead("user-2");
+
+        verify(repository).saveAll(argThat(iterable -> !iterable.iterator().hasNext()));
+    }
+
+    @Test
     void deleteNotification_shouldDelete() {
         when(repository.findById(1L)).thenReturn(Optional.of(notification));
         doNothing().when(repository).delete(any(Notification.class));
 
-        notificationService.deleteNotification(1L);
+        notificationService.deleteNotification(1L, "user-2");
 
         verify(repository).delete(notification);
     }
@@ -175,7 +196,17 @@ class NotificationServiceImplTest {
         when(repository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(NotificationNotFoundException.class,
-                () -> notificationService.deleteNotification(999L));
+                () -> notificationService.deleteNotification(999L, "user-2"));
+    }
+
+    @Test
+    void deleteNotification_whenNotOwner_shouldThrowAccessDenied() {
+        when(repository.findById(1L)).thenReturn(Optional.of(notification));
+
+        assertThrows(AccessDeniedException.class,
+                () -> notificationService.deleteNotification(1L, "user-999"));
+
+        verify(repository, never()).delete(any(Notification.class));
     }
 
     @Test
