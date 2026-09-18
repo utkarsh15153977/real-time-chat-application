@@ -31,6 +31,7 @@
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<flyway.version>10.22.0</flyway.version>
+		<jjwt.version>0.12.6</jjwt.version>
 	</properties>
 
 	<dependencyManagement>
@@ -114,6 +115,29 @@
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
+		</dependency>
+
+		<!-- JJWT API -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+
+		<!-- JJWT Implementation -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- JJWT Jackson -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<!-- Swagger -->
