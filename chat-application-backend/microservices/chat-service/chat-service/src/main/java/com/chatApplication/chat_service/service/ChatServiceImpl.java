@@ -5,6 +5,7 @@ import com.chatApplication.chat_service.dto.ChatResponse;
 import com.chatApplication.chat_service.dto.GroupRequest;
 import com.chatApplication.chat_service.entity.Chat;
 import com.chatApplication.chat_service.entity.ChatMember;
+import com.chatApplication.chat_service.exception.AuthorizationException;
 import com.chatApplication.chat_service.exception.ChatNotFoundException;
 import com.chatApplication.chat_service.exception.DuplicateMemberException;
 import com.chatApplication.chat_service.exception.GroupNotFoundException;
@@ -38,6 +39,37 @@ public class ChatServiceImpl implements ChatService {
                 .group(chat.getIsGroup())
                 .groupIcon(chat.getGroupIcon())
                 .build();
+    }
+
+    private Chat getChatOrThrow(Long chatId) {
+        return chatRepository.findById(chatId)
+                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
+    }
+
+    private void validateGroupChat(Chat chat) {
+        if (!chat.getIsGroup()) {
+            throw new GroupNotFoundException("Chat is not a group");
+        }
+    }
+
+    private void validateMembership(Long chatId, Long userId) {
+        if (!chatMemberRepository.existsByChatIdAndUserId(chatId, userId)) {
+            throw new AuthorizationException("User is not a member of this group");
+        }
+    }
+
+    private void validateAdmin(Long chatId, Long userId) {
+        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, userId)
+                .orElseThrow(() -> new AuthorizationException("User is not a member of this group"));
+        if (!Boolean.TRUE.equals(member.getAdmin())) {
+            throw new AuthorizationException("Only group admins can perform this action");
+        }
+    }
+
+    private void validateCreator(Chat chat, Long callerId) {
+        if (!callerId.equals(chat.getCreatedBy())) {
+            throw new AuthorizationException("Only the group creator can perform this action");
+        }
     }
 
     @Override
@@ -87,7 +119,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public ChatResponse createGroupChat(GroupRequest groupRequest) {
+    public ChatResponse createGroupChat(GroupRequest groupRequest, Long callerId) {
         if (groupRequest.getName() == null || groupRequest.getName().isBlank()) {
             throw new IllegalArgumentException("Group name cannot be empty");
         }
@@ -96,7 +128,7 @@ public class ChatServiceImpl implements ChatService {
                 .name(groupRequest.getName())
                 .isGroup(true)
                 .groupIcon(groupRequest.getGroupIcon())
-                .createdBy(groupRequest.getAdminId())
+                .createdBy(callerId)
                 .build();
 
         chat = chatRepository.save(chat);
@@ -104,14 +136,14 @@ public class ChatServiceImpl implements ChatService {
         chatMemberRepository.save(
                 ChatMember.builder()
                         .chatId(chat.getId())
-                        .userId(groupRequest.getAdminId())
+                        .userId(callerId)
                         .admin(true)
                         .build()
         );
 
         if (groupRequest.getMembers() != null) {
             for (Long member : groupRequest.getMembers()) {
-                if (member.equals(groupRequest.getAdminId())) {
+                if (member.equals(callerId)) {
                     continue;
                 }
                 chatMemberRepository.save(
@@ -128,8 +160,8 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public List<ChatResponse> getAllChats(Long userId) {
-        List<ChatMember> chatMembers = chatMemberRepository.findByUserId(userId);
+    public List<ChatResponse> getAllChats(Long callerId) {
+        List<ChatMember> chatMembers = chatMemberRepository.findByUserId(callerId);
         List<ChatResponse> responses = new ArrayList<>();
 
         for (ChatMember member : chatMembers) {
@@ -143,24 +175,21 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public ChatResponse addGroupMember(Long chatId, Long userId) {
-        Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
+    public ChatResponse addGroupMember(Long chatId, Long targetUserId, Long callerId) {
+        Chat chat = getChatOrThrow(chatId);
+        validateGroupChat(chat);
+        validateAdmin(chatId, callerId);
 
-        if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException("Chat is not a group");
-        }
-
-        boolean exists = chatMemberRepository.existsByChatIdAndUserId(chatId, userId);
+        boolean exists = chatMemberRepository.existsByChatIdAndUserId(chatId, targetUserId);
 
         if (exists) {
-            throw new DuplicateMemberException("User " + userId + " is already a member of chat " + chatId);
+            throw new DuplicateMemberException("User " + targetUserId + " is already a member of chat " + chatId);
         }
 
         chatMemberRepository.save(
                 ChatMember.builder()
                         .chatId(chatId)
-                        .userId(userId)
+                        .userId(targetUserId)
                         .admin(false)
                         .build()
         );
@@ -170,8 +199,16 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public void removeGroupMember(Long chatId, Long userId) {
-        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, userId)
+    public void removeGroupMember(Long chatId, Long targetUserId, Long callerId) {
+        Chat chat = getChatOrThrow(chatId);
+        validateGroupChat(chat);
+
+        boolean isSelfRemoval = callerId.equals(targetUserId);
+        if (!isSelfRemoval) {
+            validateAdmin(chatId, callerId);
+        }
+
+        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, targetUserId)
                 .orElseThrow(() -> new MemberNotFoundException(
                         "Member not found in chat " + chatId));
 
@@ -180,13 +217,10 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public ChatResponse renameGroup(Long chatId, String newName) {
-        Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
-
-        if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException("Chat is not a group");
-        }
+    public ChatResponse renameGroup(Long chatId, String newName, Long callerId) {
+        Chat chat = getChatOrThrow(chatId);
+        validateGroupChat(chat);
+        validateAdmin(chatId, callerId);
 
         if (newName == null || newName.isBlank()) {
             throw new IllegalArgumentException("Invalid group name");
@@ -200,8 +234,12 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public void leaveGroup(Long chatId, Long userId) {
-        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, userId)
+    public void leaveGroup(Long chatId, Long callerId) {
+        Chat chat = getChatOrThrow(chatId);
+        validateGroupChat(chat);
+        validateMembership(chatId, callerId);
+
+        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, callerId)
                 .orElseThrow(() -> new MemberNotFoundException(
                         "Member not found in chat " + chatId));
 
@@ -209,13 +247,10 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public List<Long> getGroupMembers(Long chatId) {
-        Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
-
-        if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException("Chat is not a group");
-        }
+    public List<Long> getGroupMembers(Long chatId, Long callerId) {
+        Chat chat = getChatOrThrow(chatId);
+        validateGroupChat(chat);
+        validateMembership(chatId, callerId);
 
         List<ChatMember> members = chatMemberRepository.findByChatId(chatId);
         List<Long> result = new ArrayList<>();
@@ -229,13 +264,10 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public void deleteGroup(Long chatId) {
-        Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new ChatNotFoundException("Chat not found with id: " + chatId));
-
-        if (!chat.getIsGroup()) {
-            throw new GroupNotFoundException("Chat is not a group");
-        }
+    public void deleteGroup(Long chatId, Long callerId) {
+        Chat chat = getChatOrThrow(chatId);
+        validateGroupChat(chat);
+        validateCreator(chat, callerId);
 
         List<ChatMember> members = chatMemberRepository.findByChatId(chatId);
         chatMemberRepository.deleteAll(members);
