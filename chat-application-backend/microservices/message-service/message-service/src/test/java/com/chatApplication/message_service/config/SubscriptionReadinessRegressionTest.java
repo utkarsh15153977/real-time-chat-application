@@ -1289,6 +1289,114 @@ class SubscriptionReadinessRegressionTest {
     }
 
     // ================================================================
+    // 27. A completes while B pending: SEND_B NOT released
+    //     (proves subscription-ID-based tracking prevents premature release)
+    // ================================================================
+
+    @Test
+    @DisplayName("A completes while B pending: SEND targeting B is NOT released until B completes")
+    void testACompletesWhileBPending_sendBNotReleased() {
+        String sessionId = UUID.randomUUID().toString();
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        Message<?> subA = createSubscribeMessage(sessionId, "sub-A", "/topic/A");
+        Message<?> subB = createSubscribeMessage(sessionId, "sub-B", "/topic/B");
+
+        // Both subscriptions pending
+        interceptor.preSend(subA, testChannel);
+        interceptor.preSend(subB, testChannel);
+
+        // Buffer a SEND targeting B's destination
+        Message<?> sendB = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendB, testChannel))
+                .as("SEND should be buffered (both subscriptions pending)")
+                .isNull();
+
+        // --- A completes ---
+        interceptor.afterMessageHandled(subA, testChannel, brokerHandler, null);
+
+        // CRITICAL: SEND_B must NOT be released
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND_B must NOT be released when A completes but B is still pending")
+                .isEmpty();
+        assertThat(interceptor.hasPendingSubscriptions(sessionId))
+                .as("B is still pending")
+                .isTrue();
+
+        // --- B completes ---
+        interceptor.afterMessageHandled(subB, testChannel, brokerHandler, null);
+
+        // NOW SEND_B should be released
+        List<Message<?>> dispatched = testChannel.getDispatchedMessages();
+        assertThat(dispatched)
+                .as("SEND_B released after B completes")
+                .hasSize(1);
+        assertThat(dispatched.get(0)).isSameAs(sendB);
+
+        // Pending state fully cleaned
+        assertThat(interceptor.hasPendingSubscriptions(sessionId))
+                .as("No pending subscriptions after both complete")
+                .isFalse();
+    }
+
+    // ================================================================
+    // 28. Duplicate SUBSCRIBE to same destination: pending tracks
+    //     subscription IDs, NOT destinations — no collapse
+    // ================================================================
+
+    @Test
+    @DisplayName("Duplicate SUBSCRIBE same destination: pending uses subId key, no collapse, SEND protected until ALL complete")
+    void testDuplicateSubscribeSameDestination_noCollapse_sendProtected() {
+        String sessionId = UUID.randomUUID().toString();
+        String destination = "/topic/public";
+
+        TestMessageChannel testChannel = new TestMessageChannel();
+
+        // --- SUBSCRIBE #1: id=sub-1, dest=/topic/public ---
+        Message<?> sub1 = createSubscribeMessage(sessionId, "sub-1", destination);
+        interceptor.preSend(sub1, testChannel);
+        assertThat(interceptor.hasPendingSubscriptions(sessionId))
+                .as("After SUBSCRIBE #1: pending set contains sub-1")
+                .isTrue();
+
+        // --- SUBSCRIBE #2: id=sub-2, dest=/topic/public (same destination) ---
+        Message<?> sub2 = createSubscribeMessage(sessionId, "sub-2", destination);
+        interceptor.preSend(sub2, testChannel);
+        assertThat(interceptor.hasPendingSubscriptions(sessionId))
+                .as("After SUBSCRIBE #2: pending set still has entries (sub-1 AND sub-2)")
+                .isTrue();
+
+        // --- SEND ---
+        Message<?> sendMsg = createSendMessage(sessionId, "/app/chat.sendMessage");
+        assertThat(interceptor.preSend(sendMsg, testChannel))
+                .as("SEND should be buffered (subscriptions pending)")
+                .isNull();
+        assertThat(testChannel.getDispatchedMessages())
+                .as("No SENDs dispatched yet")
+                .isEmpty();
+
+        // --- SUBSCRIBE #1 completes ---
+        interceptor.afterMessageHandled(sub1, testChannel, brokerHandler, null);
+        assertThat(interceptor.hasPendingSubscriptions(sessionId))
+                .as("After #1 completes: sub-2 is STILL pending (set not empty)")
+                .isTrue();
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND must NOT be released while sub-2 is still pending")
+                .isEmpty();
+
+        // --- SUBSCRIBE #2 completes ---
+        interceptor.afterMessageHandled(sub2, testChannel, brokerHandler, null);
+        assertThat(interceptor.hasPendingSubscriptions(sessionId))
+                .as("After #2 completes: pending set is empty")
+                .isFalse();
+        assertThat(testChannel.getDispatchedMessages())
+                .as("SEND released only after BOTH subscriptions complete")
+                .hasSize(1);
+        assertThat(testChannel.getDispatchedMessages().get(0)).isSameAs(sendMsg);
+    }
+
+    // ================================================================
     // Test infrastructure
     // ================================================================
 
