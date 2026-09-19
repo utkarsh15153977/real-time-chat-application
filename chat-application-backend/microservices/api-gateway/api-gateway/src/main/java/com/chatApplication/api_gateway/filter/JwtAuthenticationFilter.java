@@ -29,7 +29,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     private final ReactiveStringRedisTemplate redisTemplate;
 
-    @Value("${jwt.secret:defaultSecretKeyThatIsAtLeast32BytesLongForHS256Algorithm!}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     @Value("${jwt.jwk-set-uri:}")

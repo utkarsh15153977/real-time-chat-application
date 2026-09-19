@@ -9,7 +9,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 @Component
 public class JwtUtil {
-    @Value("${jwt.secret:defaultSecretKeyThatIsAtLeast32BytesLongForHS256Algorithm!}")
+    @Value("${jwt.secret}")
     private String secret;
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

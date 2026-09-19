@@ -1,6 +1,11 @@
 const jwt = require('jsonwebtoken');
 
-const secret = 'blinkChatSuperSecretKeyForJwtTokenSigning2024MustBeLongEnough!!';
+const secret = process.env.JWT_SECRET;
+if (!secret) {
+  console.error('Error: JWT_SECRET environment variable is required.');
+  console.error('Usage: JWT_SECRET=your-secret-node generate-test-jwt.js');
+  process.exit(1);
+}
 
 const payload = {
   sub: 'test-user-001',
