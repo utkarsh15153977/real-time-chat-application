@@ -294,10 +294,13 @@ class MessageServiceImplTest {
             assertThat(response.getContent()).isEqualTo("Hello World");
 
             verify(messageRepository).save(any(Message.class));
+            // Direct local WebSocket delivery — occurs exactly once
             verify(messagingTemplate).convertAndSendToUser(
                     eq("user2"),
                     eq("/queue/messages"),
                     any(ChatMessage.class));
+            // Redis publish — occurs exactly once (subscriber handles cross-instance)
+            verify(redisMessagePublisher).publish(any(ChatMessage.class));
             verify(messageProducer).publish(any());
         }
     }
