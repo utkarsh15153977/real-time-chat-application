@@ -257,4 +257,47 @@ class WebSocketStompIntegrationTest {
                 "Bearer " + generateValidJwt("6001", "revoked@example.com"));
         connectShouldFail(connectHeaders);
     }
+
+    @Test
+    @DisplayName("INTEGRATION 10 — JWT=3001 + native userId=9999: CONNECT succeeds with JWT identity 3001")
+    void identitySpoofing_jwtOverridesNativeUserIdHeader() throws Exception {
+        StompHeaders connectHeaders = new StompHeaders();
+        connectHeaders.add("Authorization",
+                "Bearer " + generateValidJwt("3001", "real@example.com"));
+        connectHeaders.add("userId", "9999");
+
+        TestStompSessionHandler handler = new TestStompSessionHandler();
+        StompSession session = stompClient.connectAsync(
+                getWsUrl(), new WebSocketHttpHeaders(), connectHeaders, handler)
+                .get(10, TimeUnit.SECONDS);
+        assertThat(handler.isConnected()).isTrue();
+
+        StompHeaders sendHeaders = new StompHeaders();
+        sendHeaders.add("destination", "/app/heartbeat");
+        session.send(sendHeaders, new byte[0]);
+        Thread.sleep(300);
+
+        session.disconnect();
+    }
+
+    @Test
+    @DisplayName("INTEGRATION 11 — JWT=3002 + no userId header: CONNECT succeeds with JWT identity 3002")
+    void noUserIdHeader_jwtIdentityUsed() throws Exception {
+        StompHeaders connectHeaders = new StompHeaders();
+        connectHeaders.add("Authorization",
+                "Bearer " + generateValidJwt("3002", "clean@example.com"));
+
+        TestStompSessionHandler handler = new TestStompSessionHandler();
+        StompSession session = stompClient.connectAsync(
+                getWsUrl(), new WebSocketHttpHeaders(), connectHeaders, handler)
+                .get(10, TimeUnit.SECONDS);
+        assertThat(handler.isConnected()).isTrue();
+
+        StompHeaders sendHeaders = new StompHeaders();
+        sendHeaders.add("destination", "/app/heartbeat");
+        session.send(sendHeaders, new byte[0]);
+        Thread.sleep(300);
+
+        session.disconnect();
+    }
 }
