@@ -79,6 +79,8 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
     private boolean isExemptPath(String path) {
         return path.equals("/ws")
                 || path.startsWith("/ws/")
+                || path.equals("/ws-notification")
+                || path.startsWith("/ws-notification/")
                 || path.startsWith("/actuator/")
                 || path.startsWith("/swagger-ui/")
                 || path.startsWith("/v3/api-docs/");
