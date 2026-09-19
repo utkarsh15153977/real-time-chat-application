@@ -40,21 +40,29 @@ public class PresenceWebSocketEventListener {
                 SimpMessageHeaderAccessor.wrap(event.getMessage());
 
         String sessionId = accessor.getSessionId();
-        Principal principal = accessor.getUser();
-
-        if (principal == null || sessionId == null) {
-            log.warn("WebSocket CONNECT without authenticated principal: sessionId={}", sessionId);
+        if (sessionId == null) {
+            log.warn("WebSocket CONNECT without session ID");
             return;
         }
 
-        String userIdStr = principal.getName();
+        String userIdStr = extractUserIdFromPrincipal(accessor);
+
+        if (userIdStr == null) {
+            userIdStr = extractUserIdFromSessionAttributes(accessor);
+        }
+
+        if (userIdStr == null) {
+            log.warn("WebSocket CONNECT without authenticated identity: sessionId={}", sessionId);
+            return;
+        }
+
         try {
             Long userId = Long.parseLong(userIdStr);
             sessionUserMap.put(sessionId, userId);
             presenceService.setUserOnline(userId);
             log.info("WebSocket connected: userId={}, sessionId={}", userId, sessionId);
         } catch (NumberFormatException e) {
-            log.warn("Invalid userId in principal: {}", userIdStr);
+            log.warn("Invalid userId: {} for session {}", userIdStr, sessionId);
         }
     }
 
@@ -67,5 +75,26 @@ public class PresenceWebSocketEventListener {
             presenceService.setUserOffline(userId);
             log.info("WebSocket disconnected: userId={}, sessionId={}", userId, sessionId);
         }
+    }
+
+    private String extractUserIdFromPrincipal(SimpMessageHeaderAccessor accessor) {
+        Principal principal = accessor.getUser();
+        if (principal != null) {
+            return principal.getName();
+        }
+        return null;
+    }
+
+    private String extractUserIdFromSessionAttributes(SimpMessageHeaderAccessor accessor) {
+        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            Object userIdObj = sessionAttributes.get("user_id");
+            if (userIdObj instanceof String userIdStr && !userIdStr.isBlank()) {
+                log.debug("Resolved userId from session attributes for session {}",
+                        accessor.getSessionId());
+                return userIdStr;
+            }
+        }
+        return null;
     }
 }
